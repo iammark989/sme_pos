@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             BranchSeeder::class,
             WarehouseSeeder::class,
             UserSeeder::class,
+            UomSeeder::class,
         ]);
         
     }
