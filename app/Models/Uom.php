@@ -22,8 +22,8 @@ class Uom extends Model
         ];
     }
 
-    public function inventoryItems(): HasMany
+    public function inventoryStocks(): HasMany
     {
-        return $this->hasMany(InventoryItem::class);
+        return $this->hasMany(InventoryStock::class);
     }
 }
