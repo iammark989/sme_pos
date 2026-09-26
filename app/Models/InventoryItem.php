@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\InventoryStock;
+use App\Models\InventoryTransaction;
 use App\Models\ProductRecipe;
 use App\Models\Uom;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,5 +45,10 @@ class InventoryItem extends Model
     public function stocks(): HasMany
     {
         return $this->hasMany(InventoryStock::class);
+    }
+
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
     }
 }

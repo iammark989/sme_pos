@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Branch;
 use App\Models\InventoryStock;
+use App\Models\InventoryTransaction;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,5 +34,10 @@ class Warehouse extends Model
     public function inventoryStocks(): HasMany
     {
         return $this->hasMany(InventoryStock::class);
+    }
+
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
     }
 }
