@@ -13,7 +13,20 @@ return new class extends Migration
     {
         Schema::create('product_recipes', function (Blueprint $table) {
             $table->id();
+            
+            $table->foreignId('product_id')
+                ->constrained()
+                ->restrictOnDelete();
+
+            $table->foreignId('inventory_item_id')
+                ->constrained()
+                ->restrictOnDelete();
+
+            $table->decimal('quantity', 12, 3);
+
             $table->timestamps();
+
+            $table->unique(['product_id', 'inventory_item_id']);
         });
     }
 
