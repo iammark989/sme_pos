@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
 use Illuminate\Http\Request;
@@ -26,5 +27,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/sales', [SaleQueryController::class, 'index']);
 
     Route::get('/sales/{sale}', [SaleQueryController::class, 'show']);
+
+    Route::get('/products', [ProductQueryController::class, 'index']);
+
+    Route::get('/products/{product}', [ProductQueryController::class, 'show']);
 
 });
