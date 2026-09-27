@@ -57,6 +57,110 @@ class InventoryService
         });
     }
 
+    public function transferStock(
+        Warehouse $sourceWarehouse,
+        Warehouse $destinationWarehouse,
+        InventoryItem $inventoryItem,
+        float $quantity,
+        ?string $notes = null
+    ): array {
+        if ($quantity <= 0) {
+            throw new RuntimeException(
+                'Transfer quantity must be greater than zero.'
+            );
+        }
+
+        if ($sourceWarehouse->id === $destinationWarehouse->id) {
+            throw new RuntimeException(
+                'Source and destination warehouses must be different.'
+            );
+        }
+
+        return DB::transaction(function () use (
+            $sourceWarehouse,
+            $destinationWarehouse,
+            $inventoryItem,
+            $quantity,
+            $notes
+        ) {
+            /*
+            * Lock both stock records before making any changes.
+            *
+            * This prevents two simultaneous transfers from
+            * using the same available stock.
+            */
+
+            $sourceStock = InventoryStock::where('warehouse_id', $sourceWarehouse->id)
+                ->where('inventory_item_id', $inventoryItem->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$sourceStock) {
+                throw new RuntimeException(
+                    "No stock record exists for {$inventoryItem->name} in {$sourceWarehouse->name}."
+                );
+            }
+
+            if ((float) $sourceStock->quantity < $quantity) {
+                throw new RuntimeException(
+                    "Insufficient stock for {$inventoryItem->name}. " .
+                    "Required: {$quantity}, " .
+                    "Available: {$sourceStock->quantity}."
+                );
+            }
+
+            $destinationStock = InventoryStock::where('warehouse_id', $destinationWarehouse->id)
+                ->where('inventory_item_id', $inventoryItem->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$destinationStock) {
+                $destinationStock = InventoryStock::create([
+                    'warehouse_id' => $destinationWarehouse->id,
+                    'inventory_item_id' => $inventoryItem->id,
+                    'quantity' => 0,
+                ]);
+            }
+
+            /*
+            * Deduct from source.
+            */
+            $sourceStock->decrement('quantity', $quantity);
+
+            /*
+            * Add to destination.
+            */
+            $destinationStock->increment('quantity', $quantity);
+
+            /*
+            * Record transfer-out movement.
+            */
+            InventoryTransaction::create([
+                'warehouse_id' => $sourceWarehouse->id,
+                'inventory_item_id' => $inventoryItem->id,
+                'type' => 'transfer_out',
+                'quantity' => $quantity,
+                'notes' => $notes,
+            ]);
+
+            /*
+            * Record transfer-in movement.
+            */
+            InventoryTransaction::create([
+                'warehouse_id' => $destinationWarehouse->id,
+                'inventory_item_id' => $inventoryItem->id,
+                'type' => 'transfer_in',
+                'quantity' => $quantity,
+                'notes' => $notes,
+            ]);
+
+            return [
+                'source_stock' => $sourceStock->fresh(),
+                'destination_stock' => $destinationStock->fresh(),
+            ];
+        });
+    }
+
     public function deductStock(
         Warehouse $warehouse,
         InventoryItem $inventoryItem,
