@@ -13,9 +13,10 @@ class InventoryTransaction extends Model
     use HasFactory;
 
     protected $fillable = [
-        'warehouse_id',
+         'warehouse_id',
         'inventory_item_id',
         'type',
+        'transfer_reference',
         'quantity',
         'reference_type',
         'reference_id',
@@ -37,5 +38,20 @@ class InventoryTransaction extends Model
     public function inventoryItem(): BelongsTo
     {
         return $this->belongsTo(InventoryItem::class);
+    }
+
+    public function relatedWarehouse()
+    {
+        if (!$this->transfer_reference) {
+            return null;
+        }
+
+        $relatedTransaction = static::query()
+            ->where('transfer_reference', $this->transfer_reference)
+            ->where('id', '!=', $this->id)
+            ->with('warehouse')
+            ->first();
+
+        return $relatedTransaction?->warehouse;
     }
 }

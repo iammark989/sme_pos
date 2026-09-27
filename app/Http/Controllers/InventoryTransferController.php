@@ -100,10 +100,13 @@ class InventoryTransferController extends Controller
             return response()->json([
                 'message' => 'Stock transfer completed successfully.',
                 'data' => [
+                    'transfer_reference' => $result['transfer_reference'],
+
                     'source_stock' => $result['source_stock']->load([
                         'inventoryItem.uom',
                         'warehouse',
                     ]),
+
                     'destination_stock' => $result['destination_stock']->load([
                         'inventoryItem.uom',
                         'warehouse',

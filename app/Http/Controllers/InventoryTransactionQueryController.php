@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class InventoryTransactionQueryController extends Controller
 {
-    public function index(Request $request): JsonResponse
+   public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
@@ -26,6 +26,20 @@ class InventoryTransactionQueryController extends Controller
             })
             ->latest()
             ->paginate(20);
+
+        $transactions->getCollection()->transform(function ($transaction) {
+            $transaction->transaction_category = match ($transaction->type) {
+                'stock_in' => 'Stock In',
+                'sale' => 'Sale',
+                'adjustment' => 'Adjustment',
+                'transfer_out', 'transfer_in' => 'Transfer',
+                default => 'Other',
+            };
+
+            $transaction->related_warehouse = $transaction->relatedWarehouse();
+
+            return $transaction;
+        });
 
         return response()->json([
             'data' => $transactions,

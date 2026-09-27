@@ -84,6 +84,18 @@ class InventoryService
             $notes
         ) {
             /*
+            * Generate one reference for the entire transfer.
+            *
+            * Both transfer_out and transfer_in transactions
+            * will use this same reference.
+            */
+            $transferReference =
+                'TRF-' .
+                now()->format('YmdHis') .
+                '-' .
+                strtoupper(str()->random(4));
+
+            /*
             * Lock both stock records before making any changes.
             *
             * This prevents two simultaneous transfers from
@@ -139,6 +151,7 @@ class InventoryService
                 'warehouse_id' => $sourceWarehouse->id,
                 'inventory_item_id' => $inventoryItem->id,
                 'type' => 'transfer_out',
+                'transfer_reference' => $transferReference,
                 'quantity' => $quantity,
                 'notes' => $notes,
             ]);
@@ -150,11 +163,13 @@ class InventoryService
                 'warehouse_id' => $destinationWarehouse->id,
                 'inventory_item_id' => $inventoryItem->id,
                 'type' => 'transfer_in',
+                'transfer_reference' => $transferReference,
                 'quantity' => $quantity,
                 'notes' => $notes,
             ]);
 
             return [
+                'transfer_reference' => $transferReference,
                 'source_stock' => $sourceStock->fresh(),
                 'destination_stock' => $destinationStock->fresh(),
             ];
