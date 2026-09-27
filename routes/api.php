@@ -6,6 +6,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InventoryQueryController;
 use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\ProductQueryController;
+use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
 use Illuminate\Http\Request;
@@ -43,5 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/inventory/transfers', [InventoryTransferController::class, 'store']);
 
     Route::post('/inventory/adjustments', [InventoryAdjustmentController::class, 'store']);
+
+    Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
 
 });
