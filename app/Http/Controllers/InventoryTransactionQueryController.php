@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InventoryStock;
+use App\Models\InventoryTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class InventoryQueryController extends Controller
+class InventoryTransactionQueryController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        $stocks = InventoryStock::query()
+        $transactions = InventoryTransaction::query()
             ->with([
                 'inventoryItem.uom',
                 'warehouse.branch',
@@ -27,16 +27,8 @@ class InventoryQueryController extends Controller
             ->latest()
             ->paginate(20);
 
-        $stocks->getCollection()->transform(function ($stock) {
-            $stock->is_low_stock =
-                (float) $stock->quantity <=
-                (float) $stock->inventoryItem->reorder_level;
-
-            return $stock;
-        });
-
         return response()->json([
-            'data' => $stocks,
+            'data' => $transactions,
         ]);
     }
 }

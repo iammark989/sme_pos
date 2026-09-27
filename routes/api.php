@@ -6,6 +6,7 @@ use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InventoryItemQueryController;
 use App\Http\Controllers\InventoryQueryController;
+use App\Http\Controllers\InventoryTransactionQueryController;
 use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseOrderController;
@@ -49,6 +50,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/inventory/transfers', [InventoryTransferController::class, 'store']);
 
     Route::post('/inventory/adjustments', [InventoryAdjustmentController::class, 'store']);
+
+    Route::get('/inventory/transactions', [InventoryTransactionQueryController::class, 'index',]);
 
     Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
 
