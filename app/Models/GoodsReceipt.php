@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use App\Models\GoodsReceipt;
-use App\Models\PurchaseOrderItem;
-use App\Models\Supplier;
+use App\Models\GoodsReceiptItem;
+use App\Models\PurchaseOrder;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,34 +11,29 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class PurchaseOrder extends Model
+class GoodsReceipt extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'supplier_id',
+        'purchase_order_id',
         'warehouse_id',
         'user_id',
-        'po_number',
-        'status',
-        'order_date',
-        'expected_date',
-        'total_amount',
+        'gr_number',
+        'received_date',
         'notes',
     ];
 
     protected function casts(): array
     {
         return [
-            'order_date' => 'date',
-            'expected_date' => 'date',
-            'total_amount' => 'decimal:2',
+            'received_date' => 'date',
         ];
     }
 
-    public function supplier(): BelongsTo
+    public function purchaseOrder(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(PurchaseOrder::class);
     }
 
     public function warehouse(): BelongsTo
@@ -54,11 +48,6 @@ class PurchaseOrder extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(PurchaseOrderItem::class);
-    }
-
-    public function goodsReceipts(): HasMany
-    {
-        return $this->hasMany(GoodsReceipt::class);
+        return $this->hasMany(GoodsReceiptItem::class);
     }
 }

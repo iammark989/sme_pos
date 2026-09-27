@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Branch;
+use App\Models\GoodsReceipt;
 use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
 use App\Models\PurchaseOrder;
@@ -51,6 +52,11 @@ class Warehouse extends Model
     public function purchaseOrders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function goodsReceipts(): HasMany
+    {
+        return $this->hasMany(GoodsReceipt::class);
     }
     
 }

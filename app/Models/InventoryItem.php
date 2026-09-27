@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\GoodsReceiptItem;
 use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
 use App\Models\ProductRecipe;
@@ -57,4 +58,10 @@ class InventoryItem extends Model
     {
         return $this->hasMany(PurchaseOrderItem::class);
     }
+
+    public function goodsReceiptItems(): HasMany
+    {
+        return $this->hasMany(GoodsReceiptItem::class);
+    }
+
 }
