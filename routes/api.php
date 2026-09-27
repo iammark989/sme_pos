@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\InventoryItemQueryController;
 use App\Http\Controllers\InventoryQueryController;
 use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\ProductQueryController;
@@ -63,5 +64,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/suppliers', [SupplierQueryController::class, 'index',]);
 
     Route::get('/suppliers/{supplier}', [SupplierQueryController::class, 'show',])->whereNumber('supplier');
+
+    Route::get('/inventory-items', [InventoryItemQueryController::class, 'index',]);
+
+    Route::get('/inventory-items/{inventoryItem}', [InventoryItemQueryController::class, 'show',])->whereNumber('inventoryItem');
 
 });
