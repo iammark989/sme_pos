@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InventoryQueryController;
 use App\Http\Controllers\InventoryTransferController;
@@ -40,5 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/inventory/stock-in', [InventoryController::class, 'stockIn']);
 
     Route::post('/inventory/transfers', [InventoryTransferController::class, 'store']);
+
+    Route::post('/inventory/adjustments', [InventoryAdjustmentController::class, 'store']);
 
 });
