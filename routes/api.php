@@ -11,6 +11,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderQueryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
+use App\Http\Controllers\SupplierQueryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -58,5 +59,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit',]);
 
     Route::post('/goods-receipts', [GoodsReceiptController::class, 'store']);
+
+    Route::get('/suppliers', [SupplierQueryController::class, 'index',]);
+
+    Route::get('/suppliers/{supplier}', [SupplierQueryController::class, 'show',])->whereNumber('supplier');
 
 });
