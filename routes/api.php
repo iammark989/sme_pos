@@ -13,6 +13,7 @@ use App\Http\Controllers\PurchaseOrderQueryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
 use App\Http\Controllers\SupplierQueryController;
+use App\Http\Controllers\WarehouseQueryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -68,5 +69,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/inventory-items', [InventoryItemQueryController::class, 'index',]);
 
     Route::get('/inventory-items/{inventoryItem}', [InventoryItemQueryController::class, 'show',])->whereNumber('inventoryItem');
+
+    Route::get('/warehouses', [WarehouseQueryController::class, 'index',]);
+
+    Route::get('/warehouses/{warehouse}', [WarehouseQueryController::class, 'show',])->whereNumber('warehouse');
 
 });
