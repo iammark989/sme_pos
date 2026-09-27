@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InventoryQueryController;
+use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
@@ -37,5 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/inventory/stocks', [InventoryQueryController::class, 'index']);
 
     Route::post('/inventory/stock-in', [InventoryController::class, 'stockIn']);
+
+    Route::post('/inventory/transfers', [InventoryTransferController::class, 'store']);
 
 });
