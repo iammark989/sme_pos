@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\InventoryQueryController;
@@ -48,5 +49,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
 
     Route::post('/purchase-orders/{purchaseOrder}/submit',[PurchaseOrderController::class, 'submit']);
+
+    Route::post('/goods-receipts', [GoodsReceiptController::class, 'store']);
 
 });
