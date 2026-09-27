@@ -38,4 +38,5 @@ class GoodsReceiptItem extends Model
     {
         return $this->belongsTo(InventoryItem::class);
     }
+    
 }

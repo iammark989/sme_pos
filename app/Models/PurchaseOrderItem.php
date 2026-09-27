@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\GoodsReceiptItem;
 use App\Models\InventoryItem;
 use App\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrderItem extends Model
 {
@@ -37,5 +39,14 @@ class PurchaseOrderItem extends Model
     public function inventoryItem(): BelongsTo
     {
         return $this->belongsTo(InventoryItem::class);
+    }
+
+    public function goodsReceiptItems(): HasMany
+    {
+        return $this->hasMany(
+            GoodsReceiptItem::class,
+            'inventory_item_id',
+            'inventory_item_id'
+        );
     }
 }
