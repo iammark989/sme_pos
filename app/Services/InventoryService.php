@@ -161,6 +161,79 @@ class InventoryService
         });
     }
 
+    public function adjustStock(
+        Warehouse $warehouse,
+        InventoryItem $inventoryItem,
+        string $adjustmentType,
+        float $quantity,
+        ?string $notes = null
+    ): InventoryStock {
+        if (!in_array($adjustmentType, ['increase', 'decrease'], true)) {
+            throw new RuntimeException(
+                'Adjustment type must be increase or decrease.'
+            );
+        }
+
+        if ($quantity <= 0) {
+            throw new RuntimeException(
+                'Adjustment quantity must be greater than zero.'
+            );
+        }
+
+        return DB::transaction(function () use (
+            $warehouse,
+            $inventoryItem,
+            $adjustmentType,
+            $quantity,
+            $notes
+        ) {
+            $stock = InventoryStock::where('warehouse_id', $warehouse->id)
+                ->where('inventory_item_id', $inventoryItem->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$stock) {
+                if ($adjustmentType === 'decrease') {
+                    throw new RuntimeException(
+                        "No stock record exists for {$inventoryItem->name}."
+                    );
+                }
+
+                $stock = InventoryStock::create([
+                    'warehouse_id' => $warehouse->id,
+                    'inventory_item_id' => $inventoryItem->id,
+                    'quantity' => 0,
+                ]);
+            }
+
+            if ($adjustmentType === 'decrease') {
+                if ((float) $stock->quantity < $quantity) {
+                    throw new RuntimeException(
+                        "Insufficient stock for {$inventoryItem->name}. " .
+                        "Required: {$quantity}, " .
+                        "Available: {$stock->quantity}."
+                    );
+                }
+
+                $stock->decrement('quantity', $quantity);
+            } else {
+                $stock->increment('quantity', $quantity);
+            }
+
+            InventoryTransaction::create([
+                'warehouse_id' => $warehouse->id,
+                'inventory_item_id' => $inventoryItem->id,
+                'type' => 'adjustment',
+                'quantity' => $adjustmentType === 'increase'
+                    ? $quantity
+                    : -$quantity,
+                'notes' => $notes,
+            ]);
+
+            return $stock->fresh();
+        });
+    }
+
     public function deductStock(
         Warehouse $warehouse,
         InventoryItem $inventoryItem,
