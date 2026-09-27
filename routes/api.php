@@ -47,4 +47,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
 
+    Route::post('/purchase-orders/{purchaseOrder}/submit',[PurchaseOrderController::class, 'submit']);
+
 });

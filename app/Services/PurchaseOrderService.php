@@ -119,6 +119,32 @@ class PurchaseOrderService
         });
     }
 
+    public function submit(PurchaseOrder $purchaseOrder): PurchaseOrder
+    {
+        if ($purchaseOrder->status !== 'draft') {
+            throw new RuntimeException(
+                "Purchase order '{$purchaseOrder->po_number}' cannot be submitted because its current status is '{$purchaseOrder->status}'."
+            );
+        }
+
+        if ($purchaseOrder->items()->count() === 0) {
+            throw new RuntimeException(
+                'A purchase order must contain at least one item before it can be submitted.'
+            );
+        }
+
+        $purchaseOrder->update([
+            'status' => 'submitted',
+        ]);
+
+        return $purchaseOrder->fresh([
+            'supplier',
+            'warehouse',
+            'user',
+            'items.inventoryItem.uom',
+        ]);
+    }
+
     private function generatePoNumber(): string
     {
         do {

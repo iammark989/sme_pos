@@ -64,4 +64,30 @@ class PurchaseOrderController extends Controller
             ], 422);
         }
     }
+
+    public function submit(PurchaseOrder $purchaseOrder): JsonResponse
+    {
+        $user = request()->user();
+
+        if ($purchaseOrder->warehouse->branch_id !== $user->branch_id) {
+            return response()->json([
+                'message' => 'You are not allowed to submit this purchase order.',
+            ], 403);
+        }
+
+        try {
+            $purchaseOrder = $this->purchaseOrderService->submit($purchaseOrder);
+
+            return response()->json([
+                'message' => 'Purchase order submitted successfully.',
+                'data' => [
+                    'purchase_order' => $purchaseOrder,
+                ],
+            ]);
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
 }
