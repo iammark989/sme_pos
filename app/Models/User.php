@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Branch;
+use App\Models\PurchaseOrder;
 use App\Models\Role;
 use App\Models\Sale;
 use Database\Factories\UserFactory;
@@ -62,4 +63,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(Sale::class);
     }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+    
 }

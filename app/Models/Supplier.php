@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
+use App\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Supplier extends Model
 {
@@ -25,4 +27,10 @@ class Supplier extends Model
             'is_active' => 'boolean',
         ];
     }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
 }

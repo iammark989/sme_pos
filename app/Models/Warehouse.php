@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Branch;
 use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
+use App\Models\PurchaseOrder;
 use App\Models\Sale;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,4 +47,10 @@ class Warehouse extends Model
     {
         return $this->hasMany(Sale::class);
     }
+
+    public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+    
 }

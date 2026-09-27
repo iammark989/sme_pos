@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
 use App\Models\ProductRecipe;
+use App\Models\PurchaseOrderItem;
 use App\Models\Uom;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -50,5 +51,10 @@ class InventoryItem extends Model
     public function inventoryTransactions(): HasMany
     {
         return $this->hasMany(InventoryTransaction::class);
+    }
+
+    public function purchaseOrderItems(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderItem::class);
     }
 }
