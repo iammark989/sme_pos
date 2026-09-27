@@ -8,6 +8,7 @@ use App\Http\Controllers\InventoryQueryController;
 use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\PurchaseOrderQueryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
 use Illuminate\Http\Request;
@@ -48,7 +49,13 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
 
-    Route::post('/purchase-orders/{purchaseOrder}/submit',[PurchaseOrderController::class, 'submit']);
+    Route::get('/purchase-orders', [PurchaseOrderQueryController::class, 'index',]);
+
+    Route::get('/purchase-orders/receivable', [PurchaseOrderQueryController::class, 'receivable',]);    
+
+    Route::get('/purchase-orders/{purchaseOrder}', [ PurchaseOrderQueryController::class, 'show',])->whereNumber('purchaseOrder');
+
+    Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit',]);
 
     Route::post('/goods-receipts', [GoodsReceiptController::class, 'store']);
 
