@@ -13,6 +13,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderQueryController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
+use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\SupplierQueryController;
 use App\Http\Controllers\WarehouseQueryController;
 use Illuminate\Http\Request;
@@ -77,4 +78,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/warehouses/{warehouse}', [WarehouseQueryController::class, 'show',])->whereNumber('warehouse');
 
+    Route::post('/shifts/open', [ShiftController::class, 'open']);
+
+    Route::get('/shifts/current', [ShiftController::class, 'current']);
+
+    Route::post('/shifts/close', [ShiftController::class, 'close']);
 });

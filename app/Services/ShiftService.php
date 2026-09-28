@@ -73,4 +73,49 @@ class ShiftService
             ]);
         });
     }
+
+    public function closeShift(
+        Shift $shift,
+        float $actualCash,
+        ?string $closingNotes = null
+    ): Shift {
+        if ($actualCash < 0) {
+            throw new RuntimeException('Actual cash cannot be negative.');
+        }
+
+        if ($shift->status !== 'open') {
+            throw new RuntimeException(
+                'The shift is already closed.'
+            );
+        }
+
+        return DB::transaction(function () use (
+            $shift,
+            $actualCash,
+            $closingNotes
+        ) {
+            $shift = Shift::query()
+                ->lockForUpdate()
+                ->findOrFail($shift->id);
+
+            if ($shift->status !== 'open') {
+                throw new RuntimeException(
+                    'The shift is already closed.'
+                );
+            }
+
+            $expectedCash = (float) $shift->expected_cash;
+            $cashVariance = $actualCash - $expectedCash;
+
+            $shift->update([
+                'status' => 'closed',
+                'closed_at' => now(),
+                'actual_cash' => $actualCash,
+                'cash_variance' => $cashVariance,
+                'closing_notes' => $closingNotes,
+            ]);
+
+            return $shift->fresh();
+        });
+    }
 }
