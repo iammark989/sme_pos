@@ -8,6 +8,7 @@ use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
 use App\Models\PurchaseOrder;
 use App\Models\Sale;
+use App\Models\Shift;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,6 +58,11 @@ class Warehouse extends Model
     public function goodsReceipts(): HasMany
     {
         return $this->hasMany(GoodsReceipt::class);
+    }
+
+    public function shifts()
+    {
+        return $this->hasMany(Shift::class);
     }
     
 }

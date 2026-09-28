@@ -8,6 +8,7 @@ use App\Models\GoodsReceipt;
 use App\Models\PurchaseOrder;
 use App\Models\Role;
 use App\Models\Sale;
+use App\Models\Shift;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -73,6 +74,11 @@ class User extends Authenticatable
     public function goodsReceipts(): HasMany
     {
         return $this->hasMany(GoodsReceipt::class);
+    }
+    
+    public function shifts()
+    {
+        return $this->hasMany(Shift::class);
     }
     
 }

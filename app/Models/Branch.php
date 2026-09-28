@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Sale;
+use App\Models\Shift;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Model;
@@ -38,5 +39,10 @@ class Branch extends Model
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);
+    }
+
+    public function shifts()
+    {
+        return $this->hasMany(Shift::class);
     }
 }
