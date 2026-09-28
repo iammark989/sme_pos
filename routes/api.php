@@ -8,6 +8,7 @@ use App\Http\Controllers\InventoryItemQueryController;
 use App\Http\Controllers\InventoryQueryController;
 use App\Http\Controllers\InventoryTransactionQueryController;
 use App\Http\Controllers\InventoryTransferController;
+use App\Http\Controllers\PosProductController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderQueryController;
@@ -86,4 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shifts/close', [ShiftController::class, 'close']);
 
     Route::get('/shifts/{shift}', [ShiftQueryController::class, 'show'])->whereNumber('shift');
+
+    Route::get('/pos/products', [PosProductController::class, 'index']);
+
 });
