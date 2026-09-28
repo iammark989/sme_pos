@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Payment;
 use App\Models\SaleItem;
+use App\Models\Shift;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ class Sale extends Model
         'branch_id',
         'warehouse_id',
         'user_id',
+        'shift_id',
         'sale_number',
         'status',
         'subtotal',
@@ -56,5 +58,10 @@ class Sale extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function shift(): BelongsTo
+    {
+        return $this->belongsTo(Shift::class);
     }
 }

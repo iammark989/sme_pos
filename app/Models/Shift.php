@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use App\Models\Branch;
+use App\Models\Sale;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shift extends Model
 {
@@ -50,5 +52,10 @@ class Shift extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function sales(): HasMany
+    {
+        return $this->hasMany(Sale::class);
     }
 }

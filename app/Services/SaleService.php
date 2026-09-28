@@ -6,6 +6,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\Shift;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
@@ -127,10 +128,35 @@ class SaleService
                 );
             }
 
+            $shift = Shift::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'open')
+            ->latest('opened_at')
+            ->first();
+
+        if (!$shift) {
+            throw new RuntimeException(
+                'You must have an open shift before creating a sale.'
+            );
+        }
+
+        if ($shift->branch_id !== $user->branch_id) {
+            throw new RuntimeException(
+                'The active shift does not belong to the user branch.'
+            );
+        }
+
+        if ($shift->warehouse_id !== $warehouse->id) {
+            throw new RuntimeException(
+                'The active shift does not belong to the selected warehouse.'
+            );
+        }
+
             $sale = Sale::create([
                 'branch_id' => $user->branch_id,
                 'warehouse_id' => $warehouse->id,
                 'user_id' => $user->id,
+                'shift_id' => $shift->id,
                 'sale_number' => $this->generateSaleNumber(),
                 'status' => 'completed',
                 'subtotal' => $subtotal,
@@ -171,6 +197,7 @@ class SaleService
                     'warehouse',
                     'branch',
                     'user',
+                    'shift',
                 ]),
                 'change_amount' => round($changeAmount, 2),
             ];
