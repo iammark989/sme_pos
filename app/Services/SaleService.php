@@ -132,6 +132,7 @@ class SaleService
             ->where('user_id', $user->id)
             ->where('status', 'open')
             ->latest('opened_at')
+            ->lockForUpdate()
             ->first();
 
         if (!$shift) {
@@ -189,6 +190,10 @@ class SaleService
                 'amount' => $amountPaid,
                 'reference_number' => $paymentReference,
             ]);
+
+            if ($paymentMethod === 'cash') {
+                $shift->increment('expected_cash', $totalAmount);
+            }
 
             return [
                 'sale' => $sale->load([
