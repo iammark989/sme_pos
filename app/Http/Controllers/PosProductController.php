@@ -28,7 +28,6 @@ class PosProductController extends Controller
         $products = Product::query()
             ->with([
                 'category',
-                'recipes.inventoryItem.uom',
                 'recipes.inventoryItem.stocks' => function ($query) use ($shift) {
                     $query->where('warehouse_id', $shift->warehouse_id);
                 },
@@ -38,35 +37,45 @@ class PosProductController extends Controller
             ->get();
 
         $products->transform(function ($product) {
-                $maxQuantity = null;
+            $maxQuantity = null;
 
-                foreach ($product->recipes as $recipe) {
-                    $stock = $recipe->inventoryItem->stocks->first();
+            foreach ($product->recipes as $recipe) {
+                $stock = $recipe->inventoryItem->stocks->first();
 
-                    if (!$stock || (float) $recipe->quantity <= 0) {
-                        $maxQuantity = 0;
-                        break;
-                    }
-
-                    $availableQuantity = floor(
-                        (float) $stock->quantity / (float) $recipe->quantity
-                    );
-
-                    if ($maxQuantity === null || $availableQuantity < $maxQuantity) {
-                        $maxQuantity = $availableQuantity;
-                    }
+                if (!$stock || (float) $recipe->quantity <= 0) {
+                    $maxQuantity = 0;
+                    break;
                 }
 
-                $product->max_quantity = $maxQuantity ?? 0;
-                $product->can_sell = $product->max_quantity > 0;
+                $availableQuantity = floor(
+                    (float) $stock->quantity / (float) $recipe->quantity
+                );
 
-                return $product;
-            });
+                if ($maxQuantity === null || $availableQuantity < $maxQuantity) {
+                    $maxQuantity = $availableQuantity;
+                }
+            }
+
+            $product->max_quantity = $maxQuantity ?? 0;
+            $product->can_sell = $product->max_quantity > 0;
+
+            // Keep only the fields needed by the POS.
+            $product->makeHidden([
+                'category_id',
+                'description',
+                'is_active',
+                'created_at',
+                'updated_at',
+                'recipes',
+            ]);
+
+            return $product;
+        });
 
         return response()->json([
             'data' => [
                 'shift' => $shift->load(['branch', 'warehouse']),
-                'products' => $products,
+                'products' => $products->values(),
             ],
         ]);
     }
