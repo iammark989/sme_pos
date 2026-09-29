@@ -12,6 +12,7 @@ use App\Http\Controllers\PosProductController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderQueryController;
+use App\Http\Controllers\Reports\SalesReportController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\SaleQueryController;
 use App\Http\Controllers\ShiftController;
@@ -90,4 +91,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/pos/products', [PosProductController::class, 'index']);
 
+    Route::get('/reports/sales/daily', [SalesReportController::class, 'daily',]);
+
+    Route::get('/reports/sales/daily/products', [SalesReportController::class, 'dailyProducts',]);
+
+    Route::get('/reports/sales', [SalesReportController::class, 'range',]);
 });
