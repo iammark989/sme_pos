@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BranchQueryController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
@@ -96,4 +97,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/sales/daily/products', [SalesReportController::class, 'dailyProducts',]);
 
     Route::get('/reports/sales', [SalesReportController::class, 'range',]);
+
+    Route::get('/branches', [BranchQueryController::class, 'index']);
 });
