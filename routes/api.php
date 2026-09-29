@@ -10,6 +10,7 @@ use App\Http\Controllers\InventoryQueryController;
 use App\Http\Controllers\InventoryTransactionQueryController;
 use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\PosProductController;
+use App\Http\Controllers\PosTransactionController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderQueryController;
@@ -99,4 +100,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/sales', [SalesReportController::class, 'range',]);
 
     Route::get('/branches', [BranchQueryController::class, 'index']);
+
+    Route::get('/pos/transactions', [PosTransactionController::class, 'index',]);
 });

@@ -27,6 +27,10 @@ export default function POS() {
 
     const [completedTotal, setCompletedTotal] = useState(0);
 
+    const [transactions, setTransactions] = useState([]);
+    const [transactionsLoading, setTransactionsLoading] = useState(true);
+    const [transactionsError, setTransactionsError] = useState('');
+
     const loadProducts = async () => {
             try {
                 const response = await fetch('/api/pos/products', {
@@ -60,6 +64,7 @@ export default function POS() {
                 .finally(() => {
                     setLoading(false);
                 });
+                loadTransactions();
         }, []);
 
     const addToCart = (product) => {
@@ -233,6 +238,7 @@ export default function POS() {
             );
 
             await loadProducts();
+            await loadTransactions();
 
             setCart([]);
             setPaymentMethod('cash');
@@ -265,6 +271,34 @@ export default function POS() {
             await loadProducts();
         } catch {
             // loadProducts already sets the error state.
+        }
+    };
+
+    const loadTransactions = async () => {
+        try {
+            setTransactionsLoading(true);
+            setTransactionsError('');
+
+            const response = await fetch('/api/pos/transactions', {
+                credentials: 'include',
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load transactions.'
+                );
+            }
+
+            setTransactions(result.data ?? []);
+        } catch (error) {
+            setTransactionsError(error.message);
+        } finally {
+            setTransactionsLoading(false);
         }
     };
 
@@ -762,7 +796,7 @@ export default function POS() {
                                         </div>
                                     </div>
                                 )}
-
+                
                                     {/* Total */}
                                     <div className="pt-2">
                                         <div className="flex items-center justify-between text-lg font-bold text-gray-900">
@@ -787,6 +821,122 @@ export default function POS() {
                         </div>
                     </div>
                 )}
+                <div className="rounded-xl bg-white p-6 shadow-sm">
+
+                <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-lg font-semibold text-gray-900">
+                                                Recent Transactions
+                                            </h2>
+
+                                            <p className="text-sm text-gray-500">
+                                                Your 10 most recent completed sales
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={loadTransactions}
+                                            disabled={transactionsLoading}
+                                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            Refresh
+                                        </button>
+                                    </div>
+
+                                    {transactionsLoading ? (
+                                        <div className="py-8 text-center text-sm text-gray-500">
+                                            Loading transactions...
+                                        </div>
+                                    ) : transactionsError ? (
+                                        <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                                            {transactionsError}
+                                        </div>
+                                    ) : transactions.length === 0 ? (
+                                        <div className="py-8 text-center text-sm text-gray-500">
+                                            No transactions yet.
+                                        </div>
+                                    ) : (
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full text-left text-sm">
+                                                <thead>
+                                                    <tr className="border-b text-gray-500">
+                                                        <th className="px-3 py-3 font-medium">
+                                                            Transaction
+                                                        </th>
+
+                                                        <th className="px-3 py-3 font-medium">
+                                                            Payment
+                                                        </th>
+
+                                                        <th className="px-3 py-3 font-medium text-right">
+                                                            Total
+                                                        </th>
+
+                                                        <th className="px-3 py-3 font-medium text-right">
+                                                            Date
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    {transactions.map((transaction) => {
+                                                        const payment =
+                                                            transaction.payments?.[0];
+
+                                                        return (
+                                                            <tr
+                                                                key={transaction.id}
+                                                                className="border-b last:border-b-0"
+                                                            >
+                                                                <td className="px-3 py-3">
+                                                                    <div className="font-medium text-gray-900">
+                                                                        {transaction.sale_number}
+                                                                    </div>
+
+                                                                    <div className="text-xs text-gray-500">
+                                                                        #{transaction.id}
+                                                                    </div>
+                                                                </td>
+
+                                                                <td className="px-3 py-3">
+                                                                    <div className="font-medium capitalize text-gray-900">
+                                                                        {payment?.method ?? '-'}
+                                                                    </div>
+
+                                                                    {payment?.method === 'gcash' &&
+                                                                        payment?.reference_number && (
+                                                                            <div className="text-xs text-gray-500">
+                                                                                Ref:{' '}
+                                                                                {
+                                                                                    payment.reference_number
+                                                                                }
+                                                                            </div>
+                                                                        )}
+                                                                </td>
+
+                                                                <td className="px-3 py-3 text-right font-semibold text-gray-900">
+                                                                    ₱
+                                                                    {Number(
+                                                                        transaction.total_amount
+                                                                    ).toFixed(2)}
+                                                                </td>
+
+                                                                <td className="px-3 py-3 text-right text-gray-500">
+                                                                    {new Date(
+                                                                        transaction.created_at
+                                                                    ).toLocaleString()}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                                </div>
             </div>
         </AuthenticatedLayout>
     );
