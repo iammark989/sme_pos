@@ -17,8 +17,17 @@ export default function POS() {
 
     const [completedChange, setCompletedChange] = useState(0);
 
-    useEffect(() => {
-        const loadProducts = async () => {
+    const [completedPaymentMethod, setCompletedPaymentMethod] =
+    useState('cash');
+
+    const [completedAmountPaid, setCompletedAmountPaid] = useState(0);
+
+    const [completedPaymentReference, setCompletedPaymentReference] =
+        useState('');
+
+    const [completedTotal, setCompletedTotal] = useState(0);
+
+    const loadProducts = async () => {
             try {
                 const response = await fetch('/api/pos/products', {
                     credentials: 'include',
@@ -37,15 +46,21 @@ export default function POS() {
 
                 setShift(result.data.shift);
                 setProducts(result.data.products);
+
+                return result.data;
             } catch (error) {
                 setError(error.message);
-            } finally {
-                setLoading(false);
+                throw error;
             }
         };
 
-        loadProducts();
-    }, []);
+        useEffect(() => {
+            loadProducts()
+                .catch(() => {})
+                .finally(() => {
+                    setLoading(false);
+                });
+        }, []);
 
     const addToCart = (product) => {
         setCart((currentCart) => {
@@ -166,6 +181,7 @@ export default function POS() {
         setSubmitting(true);
         setError(null);
         setSaleResult(null);
+        
 
         try {
             const response = await fetch('/api/sales', {
@@ -195,28 +211,60 @@ export default function POS() {
 
             const result = await response.json();
 
+            console.log('SALE API RESPONSE:', result);
+
             if (!response.ok) {
-                throw new Error(
-                    result.message || 'Failed to complete sale.'
-                );
+                throw new Error(result.message || 'Failed to complete sale.');
             }
 
             setSaleResult(result);
-
-            setCompletedChange(
+            setCompletedTotal(Number(result.data.sale.total_amount));
+            setCompletedChange(Number(result.data.change_amount));
+            setCompletedPaymentMethod(paymentMethod);
+            setCompletedAmountPaid(
                 paymentMethod === 'cash'
-                    ? Math.max(numericAmountPaid - cartTotal, 0)
-                    : 0
+                    ? numericAmountPaid
+                    : cartTotal
+            );
+            setCompletedPaymentReference(
+                paymentMethod === 'gcash'
+                    ? paymentReference.trim()
+                    : ''
             );
 
+            await loadProducts();
+
             setCart([]);
-            setShowPayment(false);
+            setPaymentMethod('cash');
             setAmountPaid('');
             setPaymentReference('');
+            setShowPayment(false);
         } catch (error) {
             setError(error.message);
         } finally {
             setSubmitting(false);
+        }
+    };
+
+
+    const startNewSale = async () => {
+        setSaleResult(null);
+        setCompletedChange(0);
+        setCompletedPaymentMethod('cash');
+        setCompletedAmountPaid(0);
+        setCompletedPaymentReference('');
+        setError(null);
+
+        setCart([]);
+        setShowPayment(false);
+        setPaymentMethod('cash');
+        setAmountPaid('');
+        setPaymentReference('');
+
+        try {
+            await loadProducts();
+        } catch {
+            // loadProducts already sets the error state.
         }
     };
 
@@ -258,20 +306,101 @@ export default function POS() {
                 )}
 
                 {saleResult && (
-                    <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-6">
-                        <h2 className="text-lg font-bold text-green-800">
-                            Sale Completed
-                        </h2>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                            <div className="text-center">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                                    <span className="text-2xl text-green-600">
+                                        ✓
+                                    </span>
+                                </div>
 
-                        <p className="mt-2 text-sm text-green-700">
-                            Sale #{saleResult.sale?.sale_number} completed successfully.
-                        </p>
+                                <h2 className="mt-4 text-2xl font-bold text-gray-900">
+                                    Sale Completed
+                                </h2>
 
-                        {paymentMethod === 'cash' && (
-                            <p className="mt-1 text-sm text-green-700">
-                                Change: ₱{completedChange.toFixed(2)}
-                            </p>
-                        )}
+                                <p className="mt-2 text-sm text-gray-500">
+                                    The transaction has been completed successfully.
+                                </p>
+                            </div>
+
+                            <div className="mt-6 space-y-4 rounded-xl bg-gray-50 p-5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">
+                                        Transaction #
+                                    </span>
+
+                                    <span className="text-right text-sm font-semibold text-gray-900">
+                                        {saleResult.data?.sale?.sale_number}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">
+                                        Total
+                                    </span>
+
+                                    <span className="font-semibold text-gray-900">
+                                        ₱{completedTotal.toFixed(2)}
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm text-gray-500">
+                                        Payment
+                                    </span>
+
+                                    <span className="font-semibold capitalize text-gray-900">
+                                        {completedPaymentMethod}
+                                    </span>
+                                </div>
+
+                                {paymentMethod === 'cash' && (
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-500">
+                                                Amount Paid
+                                            </span>
+
+                                            <span className="font-semibold text-gray-900">
+                                                ₱
+                                                {completedAmountPaid.toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center justify-between border-t pt-4">
+                                            <span className="font-medium text-gray-700">
+                                                Change
+                                            </span>
+
+                                            <span className="text-lg font-bold text-green-600">
+                                                ₱{completedChange.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
+
+                                {paymentMethod === 'gcash' && (
+                                    <div className="flex items-center justify-between border-t pt-4">
+                                        <span className="text-sm text-gray-500">
+                                            Reference
+                                        </span>
+
+                                        <span className="text-right text-sm font-semibold text-gray-900">
+                                            {completedPaymentReference}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={startNewSale}
+                                className="mt-6 w-full rounded-lg bg-green-600 px-4 py-3 font-semibold text-white transition hover:bg-green-700"
+                            >
+                                New Sale
+                            </button>
+                        </div>
                     </div>
                 )}
 
