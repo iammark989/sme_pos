@@ -44,4 +44,40 @@ class PosTransactionController extends Controller
             'data' => $sales,
         ]);
     }
+
+    public function show(Request $request, Sale $sale): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->branch_id) {
+            return response()->json([
+                'message' => 'You are not assigned to a branch.',
+            ], 403);
+        }
+
+        if ($sale->branch_id !== $user->branch_id) {
+            return response()->json([
+                'message' => 'You are not allowed to view this transaction.',
+            ], 403);
+        }
+
+        if ($sale->status !== 'completed') {
+            return response()->json([
+                'message' => 'Only completed transactions can be viewed.',
+            ], 422);
+        }
+
+        $sale->load([
+            'items.product',
+            'payments',
+            'warehouse',
+            'branch',
+            'user',
+            'shift',
+        ]);
+
+        return response()->json([
+            'data' => $sale,
+        ]);
+    }
 }

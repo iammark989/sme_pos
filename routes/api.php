@@ -102,4 +102,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/branches', [BranchQueryController::class, 'index']);
 
     Route::get('/pos/transactions', [PosTransactionController::class, 'index',]);
+
+    Route::get('/pos/transactions/{sale}', [PosTransactionController::class, 'show',])->whereNumber('sale');
 });

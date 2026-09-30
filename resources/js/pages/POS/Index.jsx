@@ -31,6 +31,14 @@ export default function POS() {
     const [transactionsLoading, setTransactionsLoading] = useState(true);
     const [transactionsError, setTransactionsError] = useState('');
 
+    const [selectedTransaction, setSelectedTransaction] = useState(null);
+    const [transactionLoading, setTransactionLoading] = useState(false);
+    const [transactionError, setTransactionError] = useState('');
+
+    const [showReceipt, setShowReceipt] = useState(false);
+
+    const [receiptMode, setReceiptMode] = useState('preview');
+
     const loadProducts = async () => {
             try {
                 const response = await fetch('/api/pos/products', {
@@ -302,6 +310,37 @@ export default function POS() {
         }
     };
 
+    const loadTransaction = async (saleId) => {
+        try {
+            setTransactionLoading(true);
+            setTransactionError('');
+
+            const response = await fetch(
+                `/api/pos/transactions/${saleId}`,
+                {
+                    credentials: 'include',
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load transaction.'
+                );
+            }
+
+            setSelectedTransaction(result.data);
+        } catch (error) {
+            setTransactionError(error.message);
+        } finally {
+            setTransactionLoading(false);
+        }
+    };
+
     return (
         <AuthenticatedLayout>
             <div>
@@ -339,6 +378,7 @@ export default function POS() {
                     </div>
                 )}
 
+                {/** modal sales complete */}
                 {saleResult && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
                         <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
@@ -437,6 +477,521 @@ export default function POS() {
                         </div>
                     </div>
                 )}
+
+                {/** transaction details modal */}
+
+                {selectedTransaction && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                        <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+                            <div className="mb-6 flex items-start justify-between">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">
+                                        Transaction Details
+                                    </h2>
+
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        {selectedTransaction.sale_number}
+                                    </p>
+                                </div>
+
+                                <div className="mt-6 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setReceiptMode('preview');
+                                            setShowReceipt(true);
+                                        }}
+                                        className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                    >
+                                        Receipt Preview
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setReceiptMode('reprint');
+                                            setShowReceipt(true);
+                                        }}
+                                        className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                    >
+                                        Reprint Receipt
+                                    </button>
+                                </div>
+                            </div>
+
+                            {transactionLoading ? (
+                                <div className="py-8 text-center text-sm text-gray-500">
+                                    Loading transaction...
+                                </div>
+                            ) : transactionError ? (
+                                <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+                                    {transactionError}
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="mb-6 grid gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <p className="text-xs text-gray-500">
+                                                Transaction #
+                                            </p>
+
+                                            <p className="font-semibold text-gray-900">
+                                                {selectedTransaction.sale_number}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs text-gray-500">
+                                                Date & Time
+                                            </p>
+
+                                            <p className="font-semibold text-gray-900">
+                                                {new Date(
+                                                    selectedTransaction.created_at
+                                                ).toLocaleString()}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs text-gray-500">
+                                                Branch
+                                            </p>
+
+                                            <p className="font-semibold text-gray-900">
+                                                {selectedTransaction.branch?.name}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs text-gray-500">
+                                                Staff
+                                            </p>
+
+                                            <p className="font-semibold text-gray-900">
+                                                {selectedTransaction.user?.first_name}{' '}
+                                                {selectedTransaction.user?.last_name}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mb-6 overflow-hidden rounded-lg border">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-left font-medium text-gray-500">
+                                                        Product
+                                                    </th>
+
+                                                    <th className="px-4 py-3 text-center font-medium text-gray-500">
+                                                        Qty
+                                                    </th>
+
+                                                    <th className="px-4 py-3 text-right font-medium text-gray-500">
+                                                        Price
+                                                    </th>
+
+                                                    <th className="px-4 py-3 text-right font-medium text-gray-500">
+                                                        Subtotal
+                                                    </th>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody>
+                                                {selectedTransaction.items?.map(
+                                                    (item) => (
+                                                        <tr
+                                                            key={item.id}
+                                                            className="border-t"
+                                                        >
+                                                            <td className="px-4 py-3">
+                                                                <p className="font-medium text-gray-900">
+                                                                    {item.product?.name}
+                                                                </p>
+
+                                                                <p className="text-xs text-gray-500">
+                                                                    {item.product?.sku}
+                                                                </p>
+                                                            </td>
+
+                                                            <td className="px-4 py-3 text-center">
+                                                                {Number(
+                                                                    item.quantity
+                                                                )}
+                                                            </td>
+
+                                                            <td className="px-4 py-3 text-right">
+                                                                ₱
+                                                                {Number(
+                                                                    item.unit_price
+                                                                ).toFixed(2)}
+                                                            </td>
+
+                                                            <td className="px-4 py-3 text-right font-medium">
+                                                                ₱
+                                                                {Number(
+                                                                    item.subtotal
+                                                                ).toFixed(2)}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div className="ml-auto max-w-sm space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">
+                                                Subtotal
+                                            </span>
+
+                                            <span>
+                                                ₱
+                                                {Number(
+                                                    selectedTransaction.subtotal
+                                                ).toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">
+                                                Discount
+                                            </span>
+
+                                            <span>
+                                                ₱
+                                                {Number(
+                                                    selectedTransaction.discount_amount
+                                                ).toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex justify-between border-t pt-2 text-lg font-bold">
+                                            <span>Total</span>
+
+                                            <span>
+                                                ₱
+                                                {Number(
+                                                    selectedTransaction.total_amount
+                                                ).toFixed(2)}
+                                            </span>
+                                        </div>
+
+                                        {selectedTransaction.payments?.map(
+                                            (payment) => {
+                                                const change =
+                                                    Number(payment.amount) -
+                                                    Number(
+                                                        selectedTransaction.total_amount
+                                                    );
+
+                                                return (
+                                                    <div
+                                                        key={payment.id}
+                                                        className="mt-4 border-t pt-4 text-sm"
+                                                    >
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">
+                                                                Payment
+                                                            </span>
+
+                                                            <span className="font-medium capitalize">
+                                                                {payment.method}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className="flex justify-between">
+                                                            <span className="text-gray-500">
+                                                                Amount Paid
+                                                            </span>
+
+                                                            <span>
+                                                                ₱
+                                                                {Number(
+                                                                    payment.amount
+                                                                ).toFixed(2)}
+                                                            </span>
+                                                        </div>
+
+                                                        {payment.method ===
+                                                            'cash' && (
+                                                            <div className="flex justify-between">
+                                                                <span className="text-gray-500">
+                                                                    Change
+                                                                </span>
+
+                                                                <span>
+                                                                    ₱
+                                                                    {Math.max(
+                                                                        change,
+                                                                        0
+                                                                    ).toFixed(2)}
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {payment.method ===
+                                                            'gcash' &&
+                                                            payment.reference_number && (
+                                                                <div className="flex justify-between">
+                                                                    <span className="text-gray-500">
+                                                                        GCash Reference
+                                                                    </span>
+
+                                                                    <span>
+                                                                        {
+                                                                            payment.reference_number
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                    </div>
+                                                );
+                                            }
+                                        )}
+                                    </div>
+
+                                    <div className="mt-6 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSelectedTransaction(null)
+                                            }
+                                            className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/** view receipt modal */}
+
+                {showReceipt && selectedTransaction && (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
+        <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl bg-gray-100 p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">
+                    Receipt Preview
+                </h2>
+
+                <button
+                    type="button"
+                    onClick={() => setShowReceipt(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <div className="receipt-print-area bg-white p-6 font-mono text-sm text-gray-900">
+                <div className="text-center">
+                    <h1 className="text-lg font-bold">
+                        SME POS
+                    </h1>
+
+                    <p>
+                        {selectedTransaction.branch?.name}
+                    </p>
+
+                    {selectedTransaction.branch?.address && (
+                        <p>
+                            {selectedTransaction.branch.address}
+                        </p>
+                    )}
+
+                    {selectedTransaction.branch?.contact_number && (
+                        <p>
+                            {selectedTransaction.branch.contact_number}
+                        </p>
+                    )}
+                </div>
+
+                <div className="my-4 border-t border-dashed border-gray-400" />
+
+                <div className="space-y-1">
+                    <div className="flex justify-between gap-4">
+                        <span>Transaction:</span>
+
+                        <span className="text-right">
+                            {selectedTransaction.sale_number}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                        <span>Date:</span>
+
+                        <span>
+                            {new Date(
+                                selectedTransaction.created_at
+                            ).toLocaleString()}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                        <span>Staff:</span>
+
+                        <span>
+                            {selectedTransaction.user?.first_name}{' '}
+                            {selectedTransaction.user?.last_name}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="my-4 border-t border-dashed border-gray-400" />
+
+                <div className="space-y-3">
+                    {selectedTransaction.items?.map((item) => (
+                        <div key={item.id}>
+                            <div className="font-semibold">
+                                {item.product?.name}
+                            </div>
+
+                            <div className="flex justify-between">
+                                <span>
+                                    {Number(item.quantity)} × ₱
+                                    {Number(
+                                        item.unit_price
+                                    ).toFixed(2)}
+                                </span>
+
+                                <span>
+                                    ₱
+                                    {Number(
+                                        item.subtotal
+                                    ).toFixed(2)}
+                                </span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="my-4 border-t border-dashed border-gray-400" />
+
+                <div className="space-y-1">
+                    <div className="flex justify-between">
+                        <span>Subtotal</span>
+
+                        <span>
+                            ₱
+                            {Number(
+                                selectedTransaction.subtotal
+                            ).toFixed(2)}
+                        </span>
+                    </div>
+
+                    <div className="flex justify-between">
+                        <span>Discount</span>
+
+                        <span>
+                            ₱
+                            {Number(
+                                selectedTransaction.discount_amount
+                            ).toFixed(2)}
+                        </span>
+                    </div>
+
+                    <div className="mt-2 flex justify-between text-base font-bold">
+                        <span>TOTAL</span>
+
+                        <span>
+                            ₱
+                            {Number(
+                                selectedTransaction.total_amount
+                            ).toFixed(2)}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="my-4 border-t border-dashed border-gray-400" />
+
+                {selectedTransaction.payments?.map((payment) => (
+                    <div
+                        key={payment.id}
+                        className="space-y-1"
+                    >
+                        <div className="flex justify-between">
+                            <span>Payment</span>
+
+                            <span className="uppercase">
+                                {payment.method}
+                            </span>
+                        </div>
+
+                        <div className="flex justify-between">
+                            <span>Amount Paid</span>
+
+                            <span>
+                                ₱
+                                {Number(
+                                    payment.amount
+                                ).toFixed(2)}
+                            </span>
+                        </div>
+
+                        {payment.method === 'cash' && (
+                            <div className="flex justify-between font-semibold">
+                                <span>Change</span>
+
+                                <span>
+                                    ₱
+                                    {Math.max(
+                                        Number(payment.amount) -
+                                            Number(
+                                                selectedTransaction.total_amount
+                                            ),
+                                        0
+                                    ).toFixed(2)}
+                                </span>
+                            </div>
+                        )}
+
+                        {payment.method === 'gcash' &&
+                            payment.reference_number && (
+                                <div className="flex justify-between">
+                                    <span>GCash Ref.</span>
+
+                                    <span>
+                                        {
+                                            payment.reference_number
+                                        }
+                                    </span>
+                                </div>
+                            )}
+                    </div>
+                ))}
+
+                <div className="my-4 border-t border-dashed border-gray-400" />
+
+                <div className="text-center text-xs">
+                    <p>Thank you for your purchase!</p>
+                </div>
+            </div>
+
+            <div className="receipt-print-actions mt-4 flex justify-end gap-3">
+                <button
+                    type="button"
+                    onClick={() => setShowReceipt(false)}
+                    className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    Close Preview
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                >
+                    Print Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+)}
+                
 
                 {/* Main POS Area */}
                 {!loading && !error && (
@@ -821,8 +1376,9 @@ export default function POS() {
                         </div>
                     </div>
                 )}
-                <div className="rounded-xl bg-white p-6 shadow-sm">
 
+                
+                {/** Recent Transactions */}
                 <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
                                     <div className="mb-4 flex items-center justify-between">
                                         <div>
@@ -887,9 +1443,10 @@ export default function POS() {
 
                                                         return (
                                                             <tr
-                                                                key={transaction.id}
-                                                                className="border-b last:border-b-0"
-                                                            >
+                                                                    key={transaction.id}
+                                                                    onClick={() => loadTransaction(transaction.id)}
+                                                                    className="cursor-pointer border-b last:border-b-0 hover:bg-gray-50"
+                                                                >
                                                                 <td className="px-3 py-3">
                                                                     <div className="font-medium text-gray-900">
                                                                         {transaction.sale_number}
@@ -936,7 +1493,7 @@ export default function POS() {
                                         </div>
                                     )}
                                 </div>
-                                </div>
+                                
             </div>
         </AuthenticatedLayout>
     );
