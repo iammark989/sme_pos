@@ -80,4 +80,31 @@ class TransactionHistoryController extends Controller
             'data' => $sales,
         ]);
     }
+
+    public function show(Request $request, Sale $sale): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!in_array($user->role?->name, [
+            'Owner',
+            'Admin',
+            'Accounting',
+        ], true)) {
+            return response()->json([
+                'message' => 'You are not allowed to view transaction details.',
+            ], 403);
+        }
+
+        $sale->load([
+            'items.product',
+            'payments',
+            'branch',
+            'warehouse',
+            'user',
+        ]);
+
+        return response()->json([
+            'data' => $sale,
+        ]);
+    }
 }

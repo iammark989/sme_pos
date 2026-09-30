@@ -106,6 +106,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/pos/transactions/{sale}', [PosTransactionController::class, 'show',])->whereNumber('sale');
 
-    Route::get('/transactions', [TransactionHistoryController::class, 'index',]);
+   Route::get('/transactions', [TransactionHistoryController::class, 'index',]);
+
+    Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show',])->whereNumber('sale');
 
 });

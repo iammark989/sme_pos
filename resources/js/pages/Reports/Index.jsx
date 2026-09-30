@@ -91,6 +91,16 @@ export default function ReportsIndex() {
                     </p>
                 </div>
 
+                {/** Transaction History */}
+                <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                    <a
+                    href="/reports/transactions"
+                    className="inline-flex items-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                >
+                    Transaction History
+                </a>
+                </div>
+
                 {/* Filters */}
                 <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
                     <div className="grid gap-4 md:grid-cols-3">

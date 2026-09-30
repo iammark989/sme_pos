@@ -25,19 +25,16 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Dashboard/Index');
     })->name('dashboard');
 
-    Route::get('/reports', function () {
-        return Inertia::render('Reports/Index');
-    })->name('reports');
-
-    Route::get('/auth-test', function (\Illuminate\Http\Request $request) {
-    return response()->json([
-        'authenticated' => auth()->check(),
-        'user' => $request->user()->load(['role', 'branch']),
-        ]);    
-    });
-
         Route::get('/pos', function () {
         return Inertia::render('POS/Index');
     })->name('pos');
     
+        Route::get('/reports', function () {
+        return Inertia::render('Reports/Index');
+    })->name('reports');
+    
+    Route::get('/reports/transactions', function () {
+        return Inertia::render('Reports/Transactions');
+    })->name('reports.transactions');
+
 });
