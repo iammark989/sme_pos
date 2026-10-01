@@ -324,7 +324,7 @@ export default function POS() {
 
             const result = await response.json();
 
-            console.log('SALE API RESPONSE:', result);
+            //console.log('SALE API RESPONSE:', result);
 
             if (!response.ok) {
                 throw new Error(result.message || 'Failed to complete sale.');

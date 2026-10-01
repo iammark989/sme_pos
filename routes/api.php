@@ -88,6 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/shifts/open', [ShiftController::class, 'open']);
 
     Route::get('/shifts/current', [ShiftController::class, 'current']);
+    
+    Route::get('/shifts', [ShiftQueryController::class, 'index']);
 
     Route::post('/shifts/close', [ShiftController::class, 'close']);
 

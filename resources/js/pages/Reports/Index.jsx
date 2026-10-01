@@ -1,3 +1,4 @@
+import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout';
 import { useEffect, useState } from 'react';
 
 export default function ReportsIndex() {
@@ -79,6 +80,7 @@ export default function ReportsIndex() {
     };
 
     return (
+        <AuthenticatedLayout>
         <div className="min-h-screen bg-gray-100 p-6">
             <div className="mx-auto max-w-7xl">
                 <div className="mb-6">
@@ -98,6 +100,16 @@ export default function ReportsIndex() {
                     className="inline-flex items-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
                 >
                     Transaction History
+                </a>
+                </div>
+
+                {/** Transaction History */}
+                <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                    <a
+                    href="/shifts"
+                    className="inline-flex items-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                >
+                    Shifts History
                 </a>
                 </div>
 
@@ -232,7 +244,9 @@ export default function ReportsIndex() {
                 )}
             </div>
         </div>
+        </AuthenticatedLayout>
     );
+    
 }
 
 function SummaryCard({ title, value }) {

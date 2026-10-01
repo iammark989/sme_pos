@@ -142,6 +142,25 @@ export default function CurrentShift() {
             maximumFractionDigits: 2,
         })}`;
 
+        const numericActualCash =
+    actualCash === '' ? null : Number(actualCash);
+
+    const expectedCash = Number(shift?.expected_cash ?? 0);
+
+    const cashVariance =
+        numericActualCash === null
+            ? null
+            : numericActualCash - expectedCash;
+
+    const cashVarianceLabel =
+        cashVariance === null
+            ? ''
+            : cashVariance === 0
+            ? 'Balanced'
+            : cashVariance > 0
+                ? 'Cash Over'
+                : 'Cash Short';
+
     return (
         <AuthenticatedLayout>
             <Head title="Current Shift" />
@@ -412,6 +431,63 @@ export default function CurrentShift() {
                                             placeholder="0.00"
                                         />
                                     </div>
+
+                                    {actualCash !== '' && (
+                                    <div className="rounded-lg bg-gray-50 p-4">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm text-gray-500">
+                                                Expected Cash
+                                            </span>
+
+                                            <span className="font-semibold text-gray-900">
+                                                {money(expectedCash)}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-2 flex items-center justify-between">
+                                            <span className="text-sm text-gray-500">
+                                                Actual Cash
+                                            </span>
+
+                                            <span className="font-semibold text-gray-900">
+                                                {money(numericActualCash)}
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-3 border-t pt-3">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-medium text-gray-700">
+                                                    Variance
+                                                </span>
+
+                                                <span
+                                                    className={`text-lg font-bold ${
+                                                        cashVariance === 0
+                                                            ? 'text-green-600'
+                                                            : cashVariance > 0
+                                                            ? 'text-blue-600'
+                                                            : 'text-red-600'
+                                                    }`}
+                                                >
+                                                    {cashVariance > 0 ? '+' : ''}
+                                                    {money(cashVariance)}
+                                                </span>
+                                            </div>
+
+                                            <p
+                                                className={`mt-1 text-right text-sm font-medium ${
+                                                    cashVariance === 0
+                                                        ? 'text-green-600'
+                                                        : cashVariance > 0
+                                                        ? 'text-blue-600'
+                                                        : 'text-red-600'
+                                                }`}
+                                            >
+                                                {cashVarianceLabel}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
 
                                     <div>
                                         <label
