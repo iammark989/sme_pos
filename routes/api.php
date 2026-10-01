@@ -21,6 +21,7 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ShiftQueryController;
 use App\Http\Controllers\SupplierQueryController;
 use App\Http\Controllers\TransactionHistoryController;
+use App\Http\Controllers\VoidTransactionController;
 use App\Http\Controllers\WarehouseQueryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -106,8 +107,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/pos/transactions/{sale}', [PosTransactionController::class, 'show',])->whereNumber('sale');
 
-   Route::get('/transactions', [TransactionHistoryController::class, 'index',]);
+    Route::get('/transactions', [TransactionHistoryController::class, 'index',]);
 
     Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show',])->whereNumber('sale');
+
+    Route::post('/transactions/{sale}/void', [VoidTransactionController::class, 'store',])->whereNumber('sale');
 
 });

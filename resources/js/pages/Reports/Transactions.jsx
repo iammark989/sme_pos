@@ -17,6 +17,11 @@ export default function Transactions() {
     const [showReceipt, setShowReceipt] = useState(false);
     const [receiptMode, setReceiptMode] = useState('preview');
 
+    const [showVoidModal, setShowVoidModal] = useState(false);
+    const [voidReason, setVoidReason] = useState('');
+    const [voidLoading, setVoidLoading] = useState(false);
+    const [voidError, setVoidError] = useState('');
+
     const [filters, setFilters] = useState({
         date_from: '',
         date_to: '',
@@ -141,6 +146,63 @@ export default function Transactions() {
             );
         } finally {
             setTransactionLoading(false);
+        }
+    };
+
+    const handleVoidTransaction = async () => {
+    const reason = voidReason.trim();
+
+        if (!reason) {
+            setVoidError('A void reason is required.');
+            return;
+        }
+
+        if (!selectedTransaction) {
+            return;
+        }
+
+        setVoidLoading(true);
+        setVoidError('');
+
+        try {
+            const response = await fetch(
+                `/api/transactions/${selectedTransaction.id}/void`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        reason,
+                    }),
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to void transaction.'
+                );
+            }
+
+            setShowVoidModal(false);
+            setVoidReason('');
+
+            await loadTransactions(
+                pagination.current_page,
+                filters
+            );
+
+            await loadTransaction(selectedTransaction.id);
+        } catch (error) {
+            setVoidError(
+                error.message || 'Failed to void transaction.'
+            );
+        } finally {
+            setVoidLoading(false);
         }
     };
 
@@ -555,7 +617,7 @@ export default function Transactions() {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => loadTransaction(transaction.id)}
-                                                                        className="font-medium text-blue-600 hover:text-blue-800"
+                                                                        className="cursor-pointer font-medium text-blue-600 hover:text-blue-800"
                                                                     >
                                                                         View
                                                                     </button>
@@ -882,11 +944,28 @@ export default function Transactions() {
                                             </div>
                                         ))}
                                     </div>
+                                    
 
                                     <div className="mt-6 flex justify-end gap-3">
+                                        {selectedTransaction.status === 'completed' && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setVoidReason('');
+                                                    setVoidError('');
+                                                    setShowVoidModal(true);
+                                                }}
+                                                className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700"
+                                            >
+                                                Void Transaction
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
-                                            onClick={() => setShowReceipt(true)}
+                                            onClick={() => {
+                                                setReceiptMode('preview');
+                                                setShowReceipt(true);
+                                            }}
                                             className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
                                         >
                                             Receipt Preview
@@ -916,6 +995,95 @@ export default function Transactions() {
                         </div>
                     </div>
                 )}           
+
+                {/** show void modal */}
+                {showVoidModal && selectedTransaction && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4">
+                    <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
+                        <div className="border-b border-gray-200 px-6 py-4">
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Void Transaction
+                            </h2>
+
+                            <p className="mt-1 text-sm text-gray-500">
+                                {selectedTransaction.sale_number}
+                            </p>
+                        </div>
+
+                        <div className="p-6">
+                            <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                                <p className="text-sm text-red-700">
+                                    This action will void the transaction and
+                                    reverse its inventory deduction.
+                                </p>
+                            </div>
+
+                            <div className="mt-5">
+                                <label
+                                    htmlFor="void_reason"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
+                                    Void Reason
+                                </label>
+
+                                <textarea
+                                    id="void_reason"
+                                    value={voidReason}
+                                    onChange={(event) =>
+                                        setVoidReason(event.target.value)
+                                    }
+                                    rows={4}
+                                    maxLength={1000}
+                                    placeholder="Enter the reason for voiding this transaction..."
+                                    className="w-full rounded-lg border-gray-300 text-sm shadow-sm focus:border-red-500 focus:ring-red-500"
+                                    disabled={voidLoading}
+                                />
+
+                                <p className="mt-1 text-xs text-gray-500">
+                                    A reason is required.
+                                </p>
+                            </div>
+
+                            {voidError && (
+                                <div className="mt-4 rounded-lg bg-red-50 p-3">
+                                    <p className="text-sm text-red-600">
+                                        {voidError}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowVoidModal(false);
+                                    setVoidReason('');
+                                    setVoidError('');
+                                }}
+                                disabled={voidLoading}
+                                className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleVoidTransaction}
+                                disabled={
+                                    voidLoading ||
+                                    !voidReason.trim()
+                                }
+                                className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {voidLoading
+                                    ? 'Voiding...'
+                                    : 'Confirm Void'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
                 {/** preview modal */} 
                 {showReceipt && selectedTransaction && (

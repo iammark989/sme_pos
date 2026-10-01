@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->hasMany(Sale::class);
     }
 
+    public function voids()
+    {
+        return $this->hasMany(Sale::class, 'voided_by');
+    }
+
     public function purchaseOrders(): HasMany
     {
         return $this->hasMany(PurchaseOrder::class);

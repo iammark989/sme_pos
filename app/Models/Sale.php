@@ -21,6 +21,9 @@ class Sale extends Model
         'shift_id',
         'sale_number',
         'status',
+        'voided_at',
+        'voided_by',
+        'void_reason',
         'subtotal',
         'discount_amount',
         'total_amount',
@@ -29,6 +32,7 @@ class Sale extends Model
     protected function casts(): array
     {
         return [
+            'voided_at' => 'datetime',
             'subtotal' => 'decimal:2',
             'discount_amount' => 'decimal:2',
             'total_amount' => 'decimal:2',
@@ -49,6 +53,11 @@ class Sale extends Model
     {
         return $this->belongsTo(User::class);
     }
+    
+    public function voidedBy()
+    {
+        return $this->belongsTo(User::class, 'voided_by');
+    }
 
     public function items(): HasMany
     {
@@ -64,4 +73,5 @@ class Sale extends Model
     {
         return $this->belongsTo(Shift::class);
     }
+
 }

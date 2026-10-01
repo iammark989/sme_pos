@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\InventoryItem;
 use App\Models\InventoryStock;
 use App\Models\InventoryTransaction;
+use App\Models\Sale;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -388,5 +389,55 @@ class InventoryService
                 ]);
             }
         });
+    }
+
+    public function reverseSale(
+        Sale $sale,
+        ?string $notes = null,
+    ): void {
+        $sale->loadMissing([
+            'items.product.recipes',
+        ]);
+
+        foreach ($sale->items as $item) {
+            $quantitySold = (float) $item->quantity;
+
+            foreach ($item->product->recipes as $recipe) {
+                $quantityToRestore =
+                    (float) $recipe->quantity * $quantitySold;
+
+                $stock = InventoryStock::query()
+                    ->where('warehouse_id', $sale->warehouse_id)
+                    ->where(
+                        'inventory_item_id',
+                        $recipe->inventory_item_id
+                    )
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stock) {
+                    $stock = InventoryStock::create([
+                        'warehouse_id' => $sale->warehouse_id,
+                        'inventory_item_id' => $recipe->inventory_item_id,
+                        'quantity' => 0,
+                    ]);
+                }
+
+                $stock->increment(
+                    'quantity',
+                    $quantityToRestore
+                );
+
+                InventoryTransaction::create([
+                    'warehouse_id' => $sale->warehouse_id,
+                    'inventory_item_id' => $recipe->inventory_item_id,
+                    'type' => 'sale_reversal',
+                    'quantity' => $quantityToRestore,
+                    'reference_type' => 'sale',
+                    'reference_id' => $sale->id,
+                    'notes' => $notes,
+                ]);
+            }
+        }
     }
 }
