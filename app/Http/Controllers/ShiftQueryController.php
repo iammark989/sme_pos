@@ -102,7 +102,13 @@ class ShiftQueryController extends Controller
     {
         $user = $request->user();
 
-        if ($shift->user_id !== $user->id) {
+        $isManagement = in_array(
+            $user->role?->name,
+            ['Owner', 'Admin', 'Accounting'],
+            true
+        );
+
+        if (!$isManagement && $shift->user_id !== $user->id) {
             return response()->json([
                 'message' => 'You are not allowed to view this shift.',
             ], 403);
@@ -112,6 +118,7 @@ class ShiftQueryController extends Controller
             'user',
             'branch',
             'warehouse',
+            'sales.payments',
         ]);
 
         $cashSales = $shift->sales()
@@ -153,6 +160,22 @@ class ShiftQueryController extends Controller
                         ? (float) $shift->cash_variance
                         : null,
                 ],
+                'transactions' => $shift->sales
+                    ->where('status', 'completed')
+                    ->sortByDesc('created_at')
+                    ->values()
+                    ->map(function ($sale) {
+                        $payment = $sale->payments->first();
+
+                        return [
+                            'id' => $sale->id,
+                            'sale_number' => $sale->sale_number,
+                            'status' => $sale->status,
+                            'total_amount' => (float) $sale->total_amount,
+                            'payment_method' => $payment?->method,
+                            'created_at' => $sale->created_at,
+                        ];
+                    }),
             ],
         ]);
     }
