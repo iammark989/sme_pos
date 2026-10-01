@@ -19,16 +19,6 @@ class ShiftController extends Controller
     public function open(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'branch_id' => [
-                'required',
-                'integer',
-                'exists:branches,id',
-            ],
-            'warehouse_id' => [
-                'required',
-                'integer',
-                'exists:warehouses,id',
-            ],
             'opening_cash' => [
                 'required',
                 'numeric',
@@ -42,13 +32,34 @@ class ShiftController extends Controller
 
         $user = $request->user();
 
-        $branch = Branch::findOrFail(
-            $validated['branch_id']
-        );
+        if (!$user->branch_id) {
+            return response()->json([
+                'message' => 'You are not assigned to a branch.',
+            ], 422);
+        }
 
-        $warehouse = Warehouse::findOrFail(
-            $validated['warehouse_id']
-        );
+        $branch = Branch::query()
+            ->where('id', $user->branch_id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$branch) {
+            return response()->json([
+                'message' => 'Your assigned branch is not available.',
+            ], 422);
+        }
+
+        $warehouse = Warehouse::query()
+            ->where('branch_id', $branch->id)
+            ->where('type', 'branch')
+            ->where('is_active', true)
+            ->first();
+
+        if (!$warehouse) {
+            return response()->json([
+                'message' => 'No active branch warehouse is configured for your branch.',
+            ], 422);
+        }
 
         try {
             $shift = $this->shiftService->openShift(

@@ -39,40 +39,140 @@ export default function POS() {
 
     const [receiptMode, setReceiptMode] = useState('preview');
 
-    const loadProducts = async () => {
-            try {
-                const response = await fetch('/api/pos/products', {
-                    credentials: 'include',
-                    headers: {
-                        Accept: 'application/json',
-                    },
-                });
+    const [showOpenShift, setShowOpenShift] = useState(false);
+    const [openingCash, setOpeningCash] = useState('');
+    const [openingNotes, setOpeningNotes] = useState('');
+    const [openingShiftLoading, setOpeningShiftLoading] = useState(false);
+    const [shiftLoading, setShiftLoading] = useState(true);
 
-                const result = await response.json();
+    const loadCurrentShift = async () => {
+        try {
+            setShiftLoading(true);
+            setError(null);
 
-                if (!response.ok) {
-                    throw new Error(
-                        result.message || 'Failed to load POS products.'
-                    );
-                }
+            const response = await fetch('/api/shifts/current', {
+                credentials: 'include',
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
 
-                setShift(result.data.shift);
-                setProducts(result.data.products);
+            const result = await response.json();
 
-                return result.data;
-            } catch (error) {
-                setError(error.message);
-                throw error;
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load current shift.'
+                );
             }
-        };
+
+            const currentShift = result.data?.shift ?? null;
+
+            setShift(currentShift);
+
+            return currentShift;
+        } catch (error) {
+            setShift(null);
+            setError(error.message);
+            throw error;
+        } finally {
+            setShiftLoading(false);
+        }
+    };
+
+    const loadProducts = async () => {
+        try {
+            const response = await fetch('/api/pos/products', {
+                credentials: 'include',
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load POS products.'
+                );
+            }
+
+            setProducts(result.data?.products ?? []);
+
+            return result.data;
+        } catch (error) {
+            setProducts([]);
+            setError(error.message);
+            throw error;
+        }
+    };
+
+    const initializePOS = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            const currentShift = await loadCurrentShift();
+
+            if (currentShift) {
+                await loadProducts();
+            } else {
+                setProducts([]);
+            }
+        } catch {
+            // Error state is already handled by the individual functions.
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleOpenShift = async () => {
+        const numericOpeningCash = Number(openingCash);
+
+        if (!Number.isFinite(numericOpeningCash) || numericOpeningCash < 0) {
+            setError('Opening cash must be a valid amount.');
+            return;
+        }
+
+        setOpeningShiftLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/shifts/open', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    Accept: 'application/json',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    opening_cash: numericOpeningCash,
+                    opening_notes: openingNotes.trim() || null,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to open shift.'
+                );
+            }
+
+            setOpeningCash('');
+            setOpeningNotes('');
+            setShowOpenShift(false);
+
+            await initializePOS();
+        } catch (error) {
+            setError(error.message);
+        } finally {
+            setOpeningShiftLoading(false);
+        }
+    };
 
         useEffect(() => {
-            loadProducts()
-                .catch(() => {})
-                .finally(() => {
-                    setLoading(false);
-                });
-                loadTransactions();
+            initializePOS();
+            loadTransactions();
         }, []);
 
     const addToCart = (product) => {
@@ -356,17 +456,41 @@ export default function POS() {
                         </p>
                     </div>
 
-                    {shift && (
-                        <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
-                            <p className="text-xs text-gray-500">
-                                Current Shift
-                            </p>
+                    <div className="flex items-center gap-3">
+                        {shift ? (
+                            <>
+                                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
+                                    <p className="text-xs text-gray-500">
+                                        Current Shift
+                                    </p>
 
-                            <p className="font-semibold text-gray-900">
-                                Shift #{shift.id}
-                            </p>
-                        </div>
-                    )}
+                                    <p className="font-semibold text-gray-900">
+                                        Shift #{shift.id}
+                                    </p>
+                                </div>
+
+                                <a
+                                    href="/shift"
+                                    className="rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                >
+                                    Close Shift
+                                </a>
+                            </>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setError(null);
+                                    setOpeningCash('');
+                                    setOpeningNotes('');
+                                    setShowOpenShift(true);
+                                }}
+                                className="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
+                            >
+                                Open Shift
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Error */}
@@ -474,6 +598,95 @@ export default function POS() {
                             >
                                 New Sale
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/** open shift modal */}
+
+                {showOpenShift && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">
+                                    Open Shift
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Enter the opening cash amount for this shift.
+                                </p>
+                            </div>
+
+                            <div className="mt-6 space-y-5">
+                                <div>
+                                    <label
+                                        htmlFor="opening-cash"
+                                        className="mb-2 block text-sm font-medium text-gray-700"
+                                    >
+                                        Opening Cash
+                                    </label>
+
+                                    <input
+                                        id="opening-cash"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={openingCash}
+                                        onChange={(event) =>
+                                            setOpeningCash(event.target.value)
+                                        }
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="Enter opening cash"
+                                        disabled={openingShiftLoading}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        htmlFor="opening-notes"
+                                        className="mb-2 block text-sm font-medium text-gray-700"
+                                    >
+                                        Opening Notes
+                                    </label>
+
+                                    <textarea
+                                        id="opening-notes"
+                                        rows="3"
+                                        value={openingNotes}
+                                        onChange={(event) =>
+                                            setOpeningNotes(event.target.value)
+                                        }
+                                        className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                        placeholder="Optional notes"
+                                        disabled={openingShiftLoading}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowOpenShift(false)}
+                                    disabled={openingShiftLoading}
+                                    className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleOpenShift}
+                                    disabled={
+                                        openingShiftLoading ||
+                                        openingCash === ''
+                                    }
+                                    className="rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                >
+                                    {openingShiftLoading
+                                        ? 'Opening...'
+                                        : 'Open Shift'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -994,8 +1207,34 @@ export default function POS() {
                 
 
                 {/* Main POS Area */}
-                {!loading && !error && (
+                {!loading && !shift ? (
+                    <div className="mt-6 rounded-xl border border-yellow-200 bg-yellow-50 p-8 text-center">
+                        <h2 className="text-xl font-bold text-gray-900">
+                            No Open Shift
+                        </h2>
+
+                        <p className="mt-2 text-sm text-gray-600">
+                            You must open a shift before you can start making sales.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setError(null);
+                                setOpeningCash('');
+                                setOpeningNotes('');
+                                setShowOpenShift(true);
+                            }}
+                            className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
+                        >
+                            Open Shift
+                        </button>
+                    </div>
+                ) : !loading && shift && !error ? (
+                    <>
                     <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        
+                
                         {/* Products */}
                         <div className="lg:col-span-2">
                             <div className="grid gap-4 sm:grid-cols-2">
@@ -1374,11 +1613,11 @@ export default function POS() {
                                 </div>
                             )}
                         </div>
-                    </div>
-                )}
 
-                
-                {/** Recent Transactions */}
+                        
+                    </div>
+
+                     {/** Recent Transactions */}
                 <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
                                     <div className="mb-4 flex items-center justify-between">
                                         <div>
@@ -1493,6 +1732,12 @@ export default function POS() {
                                         </div>
                                     )}
                                 </div>
+                    </>
+                ) : null}
+
+                
+                
+                
                                 
             </div>
         </AuthenticatedLayout>

@@ -37,4 +37,9 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Reports/Transactions');
     })->name('reports.transactions');
 
+    Route::get('/shift', function () {
+        return Inertia::render('Shifts/Current');
+    });
+
+
 });
