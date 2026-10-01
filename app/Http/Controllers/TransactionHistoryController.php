@@ -95,13 +95,16 @@ class TransactionHistoryController extends Controller
             ], 403);
         }
 
-        $sale->load([
+        $sale = Sale::query()
+        ->with([
             'items.product',
             'payments',
             'branch',
             'warehouse',
             'user',
-        ]);
+            'voidedBy',
+        ])
+        ->findOrFail($sale->id);
 
         return response()->json([
             'data' => $sale,

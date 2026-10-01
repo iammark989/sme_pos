@@ -1140,6 +1140,18 @@ export default function Transactions() {
                                 </div>
                             </div>
 
+                            {selectedTransaction.status === 'voided' && (
+                                <div className="my-4 border-2 border-red-600 px-3 py-3 text-center">
+                                    <p className="text-2xl font-black tracking-widest text-red-600">
+                                        VOID
+                                    </p>
+
+                                    <p className="mt-1 text-sm font-bold uppercase text-red-600">
+                                        Voided Transaction
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="my-4 border-t border-dashed border-gray-400" />
 
                             <div className="space-y-3">
@@ -1250,8 +1262,53 @@ export default function Transactions() {
 
                             <div className="my-4 border-t border-dashed border-gray-400" />
 
-                            <div className="text-center text-xs text-gray-500">
-                                <p>Thank you for your purchase!</p>
+                            {selectedTransaction.status === 'voided' && (
+                            <div className="mt-4 border-t-2 border-red-600 pt-4 text-xs">
+                                <p className="font-bold uppercase text-red-600">
+                                    VOID INFORMATION
+                                </p>
+
+                                <div className="mt-2 space-y-1">
+                                    <div className="flex justify-between gap-4">
+                                        <span>Reason</span>
+                                        <span className="text-right font-medium">
+                                            {selectedTransaction.void_reason || '-'}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-between gap-4">
+                                        <span>Voided By</span>
+                                        <span className="font-medium">
+                                            {selectedTransaction.voided_by
+                                                ? `${selectedTransaction.voided_by.first_name} ${selectedTransaction.voided_by.last_name}`
+                                                : '-'}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex justify-between gap-4">
+                                        <span>Voided At</span>
+                                        <span className="font-medium">
+                                            {selectedTransaction.voided_at
+                                                ? new Date(
+                                                    selectedTransaction.voided_at
+                                                ).toLocaleString()
+                                                : '-'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                            <div className="text-center text-xs">
+                                {selectedTransaction.status === 'voided' ? (
+                                    <p className="font-bold text-red-600">
+                                        THIS TRANSACTION IS VOID
+                                    </p>
+                                ) : (
+                                    <p className="text-gray-500">
+                                        Thank you for your purchase!
+                                    </p>
+                                )}
                             </div>
                         </div>
 
