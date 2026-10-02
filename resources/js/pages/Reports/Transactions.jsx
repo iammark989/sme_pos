@@ -685,7 +685,12 @@ export default function Transactions() {
                             </>
                         )}
                     </div>
+
+                 
+                    
                 </div>
+
+                
 
                 {/** Transaction details modal */}
 
@@ -793,11 +798,70 @@ export default function Transactions() {
                                                 Status
                                             </p>
 
-                                            <p className="mt-1 text-sm font-medium capitalize text-gray-900">
-                                                {selectedTransaction.status}
+                                            <span
+                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                                                    selectedTransaction.status === 'voided'
+                                                        ? 'bg-red-100 text-red-700'
+                                                        : 'bg-green-100 text-green-700'
+                                                }`}
+                                            >
+                                                {selectedTransaction.status === 'voided'
+                                                    ? 'VOIDED'
+                                                    : 'COMPLETED'}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {selectedTransaction.status === 'voided' && (
+                                    <div className="my-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <h3 className="text-sm font-semibold text-red-800">
+                                                Void Audit
+                                            </h3>
+
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                            <div>
+                                                <p className="text-xs font-medium text-red-700">
+                                                    Voided By
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-gray-900">
+                                                    {selectedTransaction.voided_by
+                                                        ? `${selectedTransaction.voided_by.first_name ?? ''} ${
+                                                            selectedTransaction.voided_by.last_name ?? ''
+                                                        }`.trim()
+                                                        : '-'}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-medium text-red-700">
+                                                    Voided At
+                                                </p>
+
+                                                <p className="mt-1 text-sm text-gray-900">
+                                                    {selectedTransaction.voided_at
+                                                        ? new Date(
+                                                            selectedTransaction.voided_at
+                                                        ).toLocaleString()
+                                                        : '-'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <p className="text-xs font-medium text-red-700">
+                                                Void Reason
+                                            </p>
+
+                                            <p className="mt-1 whitespace-pre-wrap text-sm text-gray-900">
+                                                {selectedTransaction.void_reason || '-'}
                                             </p>
                                         </div>
                                     </div>
+                                )}
 
                                     <div className="mt-6">
                                         <h3 className="mb-3 text-sm font-semibold text-gray-900">
