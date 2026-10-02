@@ -32,11 +32,14 @@ class InventoryController extends Controller
             $validated['inventory_item_id']
         );
 
-        if ($warehouse->branch_id !== $user->branch_id) {
-            return response()->json([
-                'message' => 'You are not allowed to stock inventory into this warehouse.',
-            ], 403);
-        }
+        if (
+                $user->role?->name !== 'Owner' &&
+                $warehouse->branch_id !== $user->branch_id
+            ) {
+                return response()->json([
+                    'message' => 'You are not allowed to stock inventory into this warehouse.',
+                ], 403);
+            }
 
         if (!$warehouse->is_active) {
             return response()->json([

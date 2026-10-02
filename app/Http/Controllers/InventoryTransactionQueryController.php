@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 
 class InventoryTransactionQueryController extends Controller
 {
-   public function index(Request $request): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
@@ -20,6 +20,10 @@ class InventoryTransactionQueryController extends Controller
             ->whereHas('warehouse', function ($query) use ($user) {
                 $query->where('is_active', true)
                     ->where(function ($query) use ($user) {
+                        if ($user->role?->name === 'Owner') {
+                            return;
+                        }
+
                         $query->whereNull('branch_id')
                             ->orWhere('branch_id', $user->branch_id);
                     });

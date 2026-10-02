@@ -12,13 +12,19 @@ class WarehouseQueryController extends Controller
     {
         $user = $request->user();
 
-        $warehouses = Warehouse::query()
+        $query = Warehouse::query()
             ->with('branch')
-            ->where('is_active', true)
-            ->where(function ($query) use ($user) {
+            ->where('is_active', true);
+
+        if ($user->role?->name !== 'Owner') {
+            $query->where(function ($query) use ($user) {
                 $query->whereNull('branch_id')
                     ->orWhere('branch_id', $user->branch_id);
-            })
+            });
+        }
+
+        $warehouses = $query
+            ->orderBy('type')
             ->orderBy('name')
             ->paginate(20);
 
