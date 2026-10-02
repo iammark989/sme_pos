@@ -32,12 +32,20 @@ export default function AuthenticatedLayout({ children }) {
                         {['Owner', 'Admin', 'Accounting'].includes(
                             user.role?.name
                         ) && (
+                            <>
                             <Link
                                 href="/reports"
                                 className="text-sm font-medium text-gray-700 hover:text-blue-600"
                             >
                                 Reports
                             </Link>
+                            <Link
+                                href="/inventory"
+                                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                            >
+                                Inventory
+                            </Link>
+                            </>
                         )}
 
                         {user.role?.name === 'Staff' && (

@@ -37,13 +37,17 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Reports/Transactions');
     })->name('reports.transactions');
 
-    Route::get('/shift/close', function () {
+    Route::get('/shift', function () {
         return Inertia::render('Shifts/Current');
     });
 
     Route::get('/shifts', function () {
         return Inertia::render('Shifts/Index');
     })->middleware(['auth'])->name('shifts.index');
+
+    Route::get('/inventory', function () {
+        return Inertia::render('Inventory/Index');
+    })->middleware('auth');
 
 
 });
