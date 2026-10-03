@@ -29,7 +29,10 @@ class PurchaseOrderService
             throw new RuntimeException('The selected warehouse is inactive.');
         }
 
-        if ($warehouse->branch_id !== $user->branch_id) {
+        if (
+            $user->role?->name !== 'Owner'
+            && $warehouse->branch_id !== $user->branch_id
+        ) {
             throw new RuntimeException(
                 'You are not allowed to create a purchase order for this warehouse.'
             );

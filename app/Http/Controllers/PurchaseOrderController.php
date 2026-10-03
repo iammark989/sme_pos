@@ -38,6 +38,12 @@ class PurchaseOrderController extends Controller
 
         $user = $request->user();
 
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to create purchase orders.',
+            ], 403);
+        }
+
         $supplier = Supplier::findOrFail($validated['supplier_id']);
         $warehouse = Warehouse::findOrFail($validated['warehouse_id']);
 
@@ -69,9 +75,9 @@ class PurchaseOrderController extends Controller
     {
         $user = request()->user();
 
-        if ($purchaseOrder->warehouse->branch_id !== $user->branch_id) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
             return response()->json([
-                'message' => 'You are not allowed to submit this purchase order.',
+                'message' => 'You are not authorized to submit purchase orders.',
             ], 403);
         }
 

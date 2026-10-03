@@ -60,13 +60,9 @@ class InventoryTransferController extends Controller
             $validated['inventory_item_id']
         );
 
-        /*
-         * Staff can only initiate transfers from warehouses
-         * belonging to their assigned branch.
-         */
-        if ($sourceWarehouse->branch_id !== $user->branch_id) {
+       if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
             return response()->json([
-                'message' => 'You are not allowed to transfer stock from this warehouse.',
+                'message' => 'You are not authorized to transfer inventory.',
             ], 403);
         }
 

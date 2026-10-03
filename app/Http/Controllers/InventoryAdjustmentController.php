@@ -54,9 +54,9 @@ class InventoryAdjustmentController extends Controller
             $validated['inventory_item_id']
         );
 
-        if ($warehouse->branch_id !== $user->branch_id) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
             return response()->json([
-                'message' => 'You are not allowed to adjust stock in this warehouse.',
+                'message' => 'You are not authorized to adjust inventory.',
             ], 403);
         }
 
