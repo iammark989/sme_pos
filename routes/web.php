@@ -4,9 +4,9 @@ use App\Http\Controllers\Web\Auth\LoginController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [LoginController::class, 'create'])
+    ->middleware('guest')
+    ->name('login.home');
 
 Route::get('/login', [LoginController::class, 'create'])
     ->middleware('guest')

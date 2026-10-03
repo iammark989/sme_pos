@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout';
 
 export default function Index() {
     const [stocks, setStocks] = useState([]);
@@ -12,6 +13,33 @@ export default function Index() {
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [inventoryItems, setInventoryItems] = useState([]);
+
+    const [showStockInModal, setShowStockInModal] = useState(false);
+    const [stockInWarehouseId, setStockInWarehouseId] = useState('');
+    const [stockInInventoryItemId, setStockInInventoryItemId] = useState('');
+    const [stockInQuantity, setStockInQuantity] = useState('');
+    const [stockInNotes, setStockInNotes] = useState('');
+    const [stockInLoading, setStockInLoading] = useState(false);
+    const [stockInError, setStockInError] = useState('');
+
+    const loadInventoryItems = async () => {
+        try {
+            const response = await axios.get('/api/inventory-items');
+
+            const result = response.data.data;
+
+            setInventoryItems(
+                Array.isArray(result)
+                    ? result
+                    : result?.data ?? []
+            );
+        } catch (error) {
+            console.error('Failed to load inventory items:', error);
+            setInventoryItems([]);
+        }
+    };
 
     const loadWarehouses = async () => {
         try {
@@ -72,8 +100,44 @@ export default function Index() {
         }
     };
 
+    const handleStockIn = async (event) => {
+        event.preventDefault();
+
+        setStockInError('');
+        setStockInLoading(true);
+
+        try {
+            await axios.post('/api/inventory/stock-in', {
+                warehouse_id: stockInWarehouseId,
+                inventory_item_id: stockInInventoryItemId,
+                quantity: stockInQuantity,
+                notes: stockInNotes.trim() || null,
+            });
+
+            setShowStockInModal(false);
+
+            setStockInWarehouseId('');
+            setStockInInventoryItemId('');
+            setStockInQuantity('');
+            setStockInNotes('');
+            setStockInError('');
+
+            await loadInventory(pagination?.current_page ?? 1);
+        } catch (error) {
+            console.error('Failed to stock in:', error);
+
+            setStockInError(
+                error.response?.data?.message ||
+                    'Failed to stock in inventory.'
+            );
+        } finally {
+            setStockInLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadWarehouses();
+        loadInventoryItems();
     }, []);
 
     useEffect(() => {
@@ -115,17 +179,31 @@ export default function Index() {
     };
 
     return (
+        <AuthenticatedLayout>
         <div className="p-6">
             {/* Header */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">
-                    Inventory
-                </h1>
+            <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            Inventory
+                        </h1>
 
-                <p className="mt-1 text-sm text-gray-500">
-                    View current inventory stock across warehouses.
-                </p>
-            </div>
+                        <p className="mt-1 text-sm text-gray-500">
+                            View current inventory stock across warehouses.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setStockInError('');
+                            setShowStockInModal(true);
+                        }}
+                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                        Stock In
+                    </button>
+                </div>
 
             {/* Filters */}
             <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -414,6 +492,151 @@ export default function Index() {
                         </div>
                     )}
             </div>
+
+            {/** stock-in modal */}
+            {showStockInModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+                <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Stock In
+                            </h2>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Add inventory stock to a warehouse.
+                            </p>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowStockInModal(false)}
+                            disabled={stockInLoading}
+                            className="text-2xl leading-none text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                        >
+                            &times;
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleStockIn}>
+                        <div className="space-y-4 px-6 py-5">
+                            {stockInError && (
+                                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    {stockInError}
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Warehouse
+                                </label>
+
+                                <select
+                                    value={stockInWarehouseId}
+                                    onChange={(event) =>
+                                        setStockInWarehouseId(event.target.value)
+                                    }
+                                    required
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="">
+                                        Select Warehouse
+                                    </option>
+
+                                    {warehouses.map((warehouse) => (
+                                        <option
+                                            key={warehouse.id}
+                                            value={warehouse.id}
+                                        >
+                                            {warehouse.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Inventory Item
+                                </label>
+
+                                <select
+                                    value={stockInInventoryItemId}
+                                    onChange={(event) =>
+                                        setStockInInventoryItemId(event.target.value)
+                                    }
+                                    required
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                    <option value="">
+                                        Select Inventory Item
+                                    </option>
+
+                                    {inventoryItems.map((item) => (
+                                        <option key={item.id} value={item.id}>
+                                            {item.name} ({item.sku})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Quantity
+                                </label>
+
+                                <input
+                                    type="number"
+                                    min="0.001"
+                                    step="0.001"
+                                    value={stockInQuantity}
+                                    onChange={(event) =>
+                                        setStockInQuantity(event.target.value)
+                                    }
+                                    required
+                                    placeholder="Enter quantity"
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    Notes
+                                </label>
+
+                                <textarea
+                                    value={stockInNotes}
+                                    onChange={(event) =>
+                                        setStockInNotes(event.target.value)
+                                    }
+                                    rows={3}
+                                    placeholder="Optional notes..."
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 border-t border-gray-200 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowStockInModal(false)}
+                                disabled={stockInLoading}
+                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="submit"
+                                disabled={stockInLoading}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {stockInLoading ? 'Processing...' : 'Stock In'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        )}
         </div>
+        </AuthenticatedLayout>
     );
 }
