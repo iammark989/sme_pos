@@ -11,6 +11,12 @@ class PurchaseOrderQueryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+       
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to view purchase orders.',
+            ], 403);
+        }
 
         $purchaseOrders = PurchaseOrder::query()
             ->with([
@@ -20,7 +26,13 @@ class PurchaseOrderQueryController extends Controller
                 'items.inventoryItem.uom',
             ])
             ->whereHas('warehouse', function ($query) use ($user) {
-                $query->where('branch_id', $user->branch_id);
+                $query->where(function ($query) use ($user) {
+                    if ($user->role?->name === 'Owner') {
+                        return;
+                    }
+
+                    $query->where('branch_id', $user->branch_id);
+                });
             })
             ->latest()
             ->paginate(20);
@@ -36,7 +48,16 @@ class PurchaseOrderQueryController extends Controller
     ): JsonResponse {
         $user = $request->user();
 
-        if ($purchaseOrder->warehouse->branch_id !== $user->branch_id) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to view purchase orders.',
+            ], 403);
+        }
+
+        if (
+                $user->role?->name !== 'Owner'
+                && $purchaseOrder->warehouse->branch_id !== $user->branch_id
+            ) {
             return response()->json([
                 'message' => 'You are not allowed to view this purchase order.',
             ], 403);
@@ -60,6 +81,12 @@ class PurchaseOrderQueryController extends Controller
     {
         $user = $request->user();
 
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to view receivable purchase orders.',
+            ], 403);
+        }
+
         $purchaseOrders = PurchaseOrder::query()
             ->with([
                 'supplier',
@@ -72,7 +99,13 @@ class PurchaseOrderQueryController extends Controller
                 'partially_received',
             ])
             ->whereHas('warehouse', function ($query) use ($user) {
-                $query->where('branch_id', $user->branch_id);
+                $query->where(function ($query) use ($user) {
+                    if ($user->role?->name === 'Owner') {
+                        return;
+                    }
+
+                    $query->where('branch_id', $user->branch_id);
+                });
             })
             ->latest()
             ->paginate(20);
