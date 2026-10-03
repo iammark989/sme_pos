@@ -12,7 +12,7 @@ class InventoryTransactionQueryController extends Controller
     {
         $user = $request->user();
 
-        $transactions = InventoryTransaction::query()
+        $query = InventoryTransaction::query()
             ->with([
                 'inventoryItem.uom',
                 'warehouse.branch',
@@ -27,14 +27,99 @@ class InventoryTransactionQueryController extends Controller
                         $query->whereNull('branch_id')
                             ->orWhere('branch_id', $user->branch_id);
                     });
-            })
-            ->latest()
-            ->paginate(20);
+            });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Search Inventory Item
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->filled('search')) {
+            $search = $request->string('search')->trim();
+
+            $query->whereHas('inventoryItem', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Warehouse Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->filled('warehouse_id')) {
+            $query->where(
+                'warehouse_id',
+                $request->integer('warehouse_id')
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Transaction Type Filter
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->filled('type')) {
+            $query->where(
+                'type',
+                $request->string('type')->trim()
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Date Filters
+        |--------------------------------------------------------------------------
+        */
+
+        if ($request->filled('date_from')) {
+            $query->whereDate(
+                'created_at',
+                '>=',
+                $request->date('date_from')
+            );
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate(
+                'created_at',
+                '<=',
+                $request->date('date_to')
+            );
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Pagination
+        |--------------------------------------------------------------------------
+        */
+
+        $perPage = min(
+            max($request->integer('per_page', 20), 1),
+            100
+        );
+
+        $transactions = $query
+            ->latest('id')
+            ->paginate($perPage);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Transaction Category
+        |--------------------------------------------------------------------------
+        */
 
         $transactions->getCollection()->transform(function ($transaction) {
             $transaction->transaction_category = match ($transaction->type) {
                 'stock_in' => 'Stock In',
                 'sale' => 'Sale',
+                'sale_reversal' => 'Sale Reversal',
                 'adjustment' => 'Adjustment',
                 'transfer_out', 'transfer_in' => 'Transfer',
                 default => 'Other',

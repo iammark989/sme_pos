@@ -49,5 +49,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Inventory/Index');
     })->middleware('auth');
 
+    Route::get('/inventory/transactions', function () {
+        return Inertia::render('Inventory/Transactions');
+    })->middleware(['auth']);
 
 });
