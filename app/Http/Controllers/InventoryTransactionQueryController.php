@@ -12,6 +12,12 @@ class InventoryTransactionQueryController extends Controller
     {
         $user = $request->user();
 
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to view inventory transaction history.',
+            ], 403);
+        }
+
         $query = InventoryTransaction::query()
             ->with([
                 'inventoryItem.uom',
