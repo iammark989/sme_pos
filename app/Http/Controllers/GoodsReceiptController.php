@@ -60,9 +60,9 @@ class GoodsReceiptController extends Controller
             $validated['warehouse_id']
         );
 
-        if ($warehouse->branch_id !== $user->branch_id) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
             return response()->json([
-                'message' => 'You are not allowed to receive goods into this warehouse.',
+                'message' => 'You are not authorized to receive goods.',
             ], 403);
         }
 

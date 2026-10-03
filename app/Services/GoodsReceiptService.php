@@ -40,7 +40,10 @@ class GoodsReceiptService
             );
         }
 
-        if ($warehouse->branch_id !== $user->branch_id) {
+        if (
+            $user->role?->name !== 'Owner'
+            && $warehouse->branch_id !== $user->branch_id
+        ) {
             throw new RuntimeException(
                 'You are not allowed to receive goods into this warehouse.'
             );
