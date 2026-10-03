@@ -12,6 +12,12 @@ class WarehouseQueryController extends Controller
     {
         $user = $request->user();
 
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to view warehouses.',
+            ], 403);
+        }
+
         $query = Warehouse::query()
             ->with('branch')
             ->where('is_active', true);
@@ -39,6 +45,12 @@ class WarehouseQueryController extends Controller
     ): JsonResponse {
         $user = $request->user();
 
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not authorized to view warehouses.',
+            ], 403);
+        }
+
         if (!$warehouse->is_active) {
             return response()->json([
                 'message' => 'Warehouse is inactive.',
@@ -46,6 +58,7 @@ class WarehouseQueryController extends Controller
         }
 
         if (
+            $user->role?->name !== 'Owner' &&
             $warehouse->branch_id !== null &&
             $warehouse->branch_id !== $user->branch_id
         ) {
