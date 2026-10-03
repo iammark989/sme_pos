@@ -39,6 +39,11 @@ class TransactionHistoryController extends Controller
                 'user',
             ])
             ->when(
+                $user->role?->name !== 'Owner',
+                fn ($query) =>
+                    $query->where('branch_id', $user->branch_id)
+            )
+            ->when(
                 $validated['date_from'] ?? null,
                 fn ($query, $date) =>
                     $query->whereDate('created_at', '>=', $date)
@@ -92,6 +97,15 @@ class TransactionHistoryController extends Controller
         ], true)) {
             return response()->json([
                 'message' => 'You are not allowed to view transaction details.',
+            ], 403);
+        }
+
+        if (
+            $user->role?->name !== 'Owner'
+            && $sale->branch_id !== $user->branch_id
+        ) {
+            return response()->json([
+                'message' => 'You are not allowed to view this transaction.',
             ], 403);
         }
 

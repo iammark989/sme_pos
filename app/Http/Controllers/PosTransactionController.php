@@ -8,22 +8,31 @@ use Illuminate\Http\Request;
 
 class PosTransactionController extends Controller
 {
-    public function index(Request $request): JsonResponse
+   public function index(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        if (!$user->branch_id) {
-            return response()->json([
-                'message' => 'You are not assigned to a branch.',
-            ], 403);
-        }
-
-        $sales = Sale::query()
+        $query = Sale::query()
             ->with([
                 'payments',
             ])
-            ->where('branch_id', $user->branch_id)
-            ->where('status', 'completed')
+            ->where('status', 'completed');
+
+        if ($user->role?->name === 'Owner') {
+            // Owner can view transactions across all branches.
+        } elseif ($user->role?->name === 'Staff') {
+            $query->where('user_id', $user->id);
+        } else {
+            if (!$user->branch_id) {
+                return response()->json([
+                    'message' => 'You are not assigned to a branch.',
+                ], 403);
+            }
+
+            $query->where('branch_id', $user->branch_id);
+        }
+
+        $sales = $query
             ->latest()
             ->limit(10)
             ->get([
@@ -49,16 +58,26 @@ class PosTransactionController extends Controller
     {
         $user = $request->user();
 
-        if (!$user->branch_id) {
-            return response()->json([
-                'message' => 'You are not assigned to a branch.',
-            ], 403);
-        }
+        if ($user->role?->name === 'Owner') {
+            // Owner can view any transaction.
+        } elseif ($user->role?->name === 'Staff') {
+            if ($sale->user_id !== $user->id) {
+                return response()->json([
+                    'message' => 'You are not allowed to view this transaction.',
+                ], 403);
+            }
+        } else {
+            if (!$user->branch_id) {
+                return response()->json([
+                    'message' => 'You are not assigned to a branch.',
+                ], 403);
+            }
 
-        if ($sale->branch_id !== $user->branch_id) {
-            return response()->json([
-                'message' => 'You are not allowed to view this transaction.',
-            ], 403);
+            if ($sale->branch_id !== $user->branch_id) {
+                return response()->json([
+                    'message' => 'You are not allowed to view this transaction.',
+                ], 403);
+            }
         }
 
         if ($sale->status !== 'completed') {
