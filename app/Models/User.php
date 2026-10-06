@@ -29,6 +29,7 @@ use Laravel\Sanctum\HasApiTokens;
         'password',
         'role_id',
         'branch_id',
+        'is_global_admin',
         'is_active',
     ])]
 #[Hidden(['password', 'remember_token'])]
@@ -47,6 +48,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_global_admin' => 'boolean',
             'is_active' => 'boolean',
         ];
     }
@@ -84,6 +86,15 @@ class User extends Authenticatable
     public function shifts()
     {
         return $this->hasMany(Shift::class);
+    }
+
+    public function hasGlobalAccess(): bool
+    {
+        return $this->role?->name === 'Owner'
+            || (
+                $this->role?->name === 'Admin'
+                && $this->is_global_admin
+            );
     }
     
 }

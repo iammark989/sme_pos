@@ -21,6 +21,7 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ShiftQueryController;
 use App\Http\Controllers\SupplierQueryController;
 use App\Http\Controllers\TransactionHistoryController;
+use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VoidTransactionController;
 use App\Http\Controllers\WarehouseQueryController;
 use Illuminate\Http\Request;
@@ -114,5 +115,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show',])->whereNumber('sale');
 
     Route::post('/transactions/{sale}/void', [VoidTransactionController::class, 'store',])->whereNumber('sale');
+
+    Route::get('/users', [UserManagementController::class, 'index']);
+    
+    Route::get('/users/{managedUser}', [UserManagementController::class, 'show'])->whereNumber('managedUser');
+
+    Route::post('/users', [UserManagementController::class, 'store']);
+
+    Route::put('/users/{managedUser}', [UserManagementController::class, 'update'])->whereNumber('managedUser');
+
+    Route::delete('/users/{managedUser}', [UserManagementController::class, 'destroy'])->whereNumber('managedUser');
 
 });
