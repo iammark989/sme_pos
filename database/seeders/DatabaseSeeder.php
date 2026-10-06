@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             ProductRecipeSeeder::class,
             SupplierSeeder::class,
+            BranchTwoTestSeeder::class,
         ]);
         
     }

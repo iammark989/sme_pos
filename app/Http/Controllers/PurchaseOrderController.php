@@ -38,7 +38,7 @@ class PurchaseOrderController extends Controller
 
         $user = $request->user();
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin',], true)) {
             return response()->json([
                 'message' => 'You are not authorized to create purchase orders.',
             ], 403);
@@ -75,7 +75,7 @@ class PurchaseOrderController extends Controller
     {
         $user = request()->user();
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin',], true)) {
             return response()->json([
                 'message' => 'You are not authorized to submit purchase orders.',
             ], 403);

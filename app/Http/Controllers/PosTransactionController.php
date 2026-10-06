@@ -99,4 +99,5 @@ class PosTransactionController extends Controller
             'data' => $sale,
         ]);
     }
+    
 }
