@@ -12,7 +12,7 @@ class SupplierQueryController extends Controller
     {
          $user = $request->user();
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin',], true)) {
             return response()->json([
                 'message' => 'You are not authorized to view suppliers.',
             ], 403);
@@ -34,7 +34,7 @@ class SupplierQueryController extends Controller
     ): JsonResponse {
          $user = $request->user();
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin', ], true)) {
             return response()->json([
                 'message' => 'You are not authorized to view suppliers.',
             ], 403);

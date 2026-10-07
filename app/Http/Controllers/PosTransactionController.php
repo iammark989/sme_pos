@@ -13,13 +13,11 @@ class PosTransactionController extends Controller
         $user = $request->user();
 
         $query = Sale::query()
-            ->with([
-                'payments',
-            ])
+            ->with(['payments'])
             ->where('status', 'completed');
 
-        if ($user->role?->name === 'Owner') {
-            // Owner can view transactions across all branches.
+        if ($user->hasGlobalAccess()) {
+            // Owner and Global Admin can view transactions across all branches.
         } elseif ($user->role?->name === 'Staff') {
             $query->where('user_id', $user->id);
         } else {
@@ -56,10 +54,10 @@ class PosTransactionController extends Controller
 
     public function show(Request $request, Sale $sale): JsonResponse
     {
-        $user = $request->user();
+       $user = $request->user();
 
-        if ($user->role?->name === 'Owner') {
-            // Owner can view any transaction.
+        if ($user->hasGlobalAccess()) {
+            // Owner and Global Admin can view transactions across all branches.
         } elseif ($user->role?->name === 'Staff') {
             if ($sale->user_id !== $user->id) {
                 return response()->json([

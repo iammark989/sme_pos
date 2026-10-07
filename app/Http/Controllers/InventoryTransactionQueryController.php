@@ -26,12 +26,12 @@ class InventoryTransactionQueryController extends Controller
             ->whereHas('warehouse', function ($query) use ($user) {
                 $query->where('is_active', true)
                     ->where(function ($query) use ($user) {
-                        if ($user->role?->name === 'Owner') {
+                        if ($user->hasGlobalAccess()) {
+                            // Owner and Global Admin can view all active warehouses.
                             return;
                         }
 
-                        $query->whereNull('branch_id')
-                            ->orWhere('branch_id', $user->branch_id);
+                        $query->where('branch_id', $user->branch_id);
                     });
             });
 

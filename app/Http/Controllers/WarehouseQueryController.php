@@ -22,12 +22,9 @@ class WarehouseQueryController extends Controller
             ->with('branch')
             ->where('is_active', true);
 
-        if ($user->role?->name !== 'Owner') {
-            $query->where(function ($query) use ($user) {
-                $query->whereNull('branch_id')
-                    ->orWhere('branch_id', $user->branch_id);
-            });
-        }
+        if (!$user->hasGlobalAccess()) {
+                $query->where('branch_id', $user->branch_id);
+            }
 
         $warehouses = $query
             ->orderBy('type')
@@ -58,8 +55,7 @@ class WarehouseQueryController extends Controller
         }
 
         if (
-            $user->role?->name !== 'Owner' &&
-            $warehouse->branch_id !== null &&
+            !$user->hasGlobalAccess() &&
             $warehouse->branch_id !== $user->branch_id
         ) {
             return response()->json([

@@ -39,9 +39,8 @@ class TransactionHistoryController extends Controller
                 'user',
             ])
             ->when(
-                $user->role?->name !== 'Owner',
-                fn ($query) =>
-                    $query->where('branch_id', $user->branch_id)
+                !$user->hasGlobalAccess(),
+                fn ($query) => $query->where('branch_id', $user->branch_id)
             )
             ->when(
                 $validated['date_from'] ?? null,
@@ -101,7 +100,7 @@ class TransactionHistoryController extends Controller
         }
 
         if (
-            $user->role?->name !== 'Owner'
+            !$user->hasGlobalAccess()
             && $sale->branch_id !== $user->branch_id
         ) {
             return response()->json([

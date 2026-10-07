@@ -36,6 +36,15 @@ class VoidSaleService
             );
         }
 
+        if (
+            !$user->hasGlobalAccess() &&
+            $sale->branch_id !== $user->branch_id
+        ) {
+            throw new RuntimeException(
+                'You are not allowed to void transactions from another branch.'
+            );
+        }
+
         return DB::transaction(function () use (
             $sale,
             $user,

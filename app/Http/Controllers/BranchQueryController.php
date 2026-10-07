@@ -18,8 +18,14 @@ class BranchQueryController extends Controller
             ], 403);
         }
 
-        $branches = Branch::query()
-            ->where('is_active', true)
+        $query = Branch::query()
+            ->where('is_active', true);
+
+        if (!$user->hasGlobalAccess()) {
+            $query->where('id', $user->branch_id);
+        }
+
+        $branches = $query
             ->orderBy('name')
             ->get([
                 'id',

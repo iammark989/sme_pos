@@ -366,8 +366,10 @@ class UserManagementController extends Controller
             ], 403);
         }
 
+        // Branch Admin can only manage users in their own branch.
+        // Owner and Global Admin can manage users across all branches.
         if (
-            $user->role?->name !== 'Owner'
+            !$user->hasGlobalAccess()
             && $managedUser->branch_id !== $user->branch_id
         ) {
             return response()->json([
@@ -375,27 +377,29 @@ class UserManagementController extends Controller
             ], 403);
         }
 
+        // Nobody can deactivate the Owner.
+        if ($managedUser->role?->name === 'Owner') {
+            return response()->json([
+                'message' => 'The Owner account cannot be deactivated.',
+            ], 403);
+        }
+
+        // Prevent a user from deactivating their own account.
         if ($managedUser->id === $user->id) {
             return response()->json([
                 'message' => 'You cannot deactivate your own account.',
             ], 422);
         }
 
-        if (
-            $user->role?->name === 'Admin'
-            && $managedUser->role?->name === 'Owner'
-        ) {
-            return response()->json([
-                'message' => 'Admin cannot deactivate an Owner account.',
-            ], 403);
-        }
-
-        $managedUser->update([
-            'is_active' => false,
-        ]);
+        $managedUser->is_active = false;
+        $managedUser->save();
 
         return response()->json([
             'message' => 'User deactivated successfully.',
+            'data' => $managedUser->fresh([
+                'role',
+                'branch',
+            ]),
         ]);
     }
 }
