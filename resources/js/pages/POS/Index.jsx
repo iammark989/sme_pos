@@ -458,38 +458,71 @@ export default function POS() {
 
                     <div className="flex items-center gap-3">
                         {shift ? (
-                            <>
-                                <div className="rounded-lg bg-white px-4 py-3 shadow-sm">
-                                    <p className="text-xs text-gray-500">
-                                        Current Shift
-                                    </p>
+                                <>
+                                    <div className="rounded-xl bg-white px-4 py-3 shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
 
-                                    <p className="font-semibold text-gray-900">
-                                        Shift #{shift.id}
-                                    </p>
-                                </div>
+                                            <p className="text-xs font-medium text-gray-500">
+                                                Active Shift
+                                            </p>
+                                        </div>
 
-                                <a
-                                    href="/shift"
-                                    className="rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                        <p className="mt-1 font-semibold text-gray-900">
+                                            Shift #{shift.id}
+                                        </p>
+
+                                        <div className="mt-2 space-y-0.5 text-xs text-gray-500">
+                                            <p>
+                                                Branch:{' '}
+                                                <span className="font-medium text-gray-700">
+                                                    {shift.branch?.name || '—'}
+                                                </span>
+                                            </p>
+
+                                            <p>
+                                                Warehouse:{' '}
+                                                <span className="font-medium text-gray-700">
+                                                    {shift.warehouse?.name || '—'}
+                                                </span>
+                                            </p>
+
+                                            <p>
+                                                Opening Cash:{' '}
+                                                <span className="font-medium text-gray-700">
+                                                    ₱
+                                                    {Number(
+                                                        shift.opening_cash ?? 0
+                                                    ).toLocaleString('en-PH', {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    })}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <a
+                                        href="/shift"
+                                        className="rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                    >
+                                        Close Shift
+                                    </a>
+                                </>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setError(null);
+                                        setOpeningCash('');
+                                        setOpeningNotes('');
+                                        setShowOpenShift(true);
+                                    }}
+                                    className="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
                                 >
-                                    Close Shift
-                                </a>
-                            </>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setError(null);
-                                    setOpeningCash('');
-                                    setOpeningNotes('');
-                                    setShowOpenShift(true);
-                                }}
-                                className="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
-                            >
-                                Open Shift
-                            </button>
-                        )}
+                                    Open Shift
+                                </button>
+                            )}
                     </div>
                 </div>
 
