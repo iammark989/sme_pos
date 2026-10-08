@@ -553,7 +553,7 @@ export default function POS() {
                                     </span>
                                 </div>
 
-                                {paymentMethod === 'cash' && (
+                                {completedPaymentMethod === 'cash' && (
                                     <>
                                         <div className="flex items-center justify-between">
                                             <span className="text-sm text-gray-500">
@@ -578,7 +578,7 @@ export default function POS() {
                                     </>
                                 )}
 
-                                {paymentMethod === 'gcash' && (
+                                {completedPaymentMethod === 'gcash' && (
                                     <div className="flex items-center justify-between border-t pt-4">
                                         <span className="text-sm text-gray-500">
                                             Reference

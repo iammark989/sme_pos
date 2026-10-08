@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchQueryController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryAdjustmentController;
 use App\Http\Controllers\InventoryController;
@@ -125,5 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/users/{managedUser}', [UserManagementController::class, 'update'])->whereNumber('managedUser');
 
     Route::delete('/users/{managedUser}', [UserManagementController::class, 'destroy'])->whereNumber('managedUser');
+
+    Route::get('/dashboard', [DashboardController::class, 'index']);
 
 });

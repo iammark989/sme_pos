@@ -24,6 +24,28 @@ export default function Index() {
     const [stockInLoading, setStockInLoading] = useState(false);
     const [stockInError, setStockInError] = useState('');
 
+    const [showTransferModal, setShowTransferModal] = useState(false);
+
+    const [transferWarehouseId, setTransferWarehouseId] = useState('');
+    const [transferToWarehouseId, setTransferToWarehouseId] = useState('');
+    const [transferInventoryItemId, setTransferInventoryItemId] = useState('');
+    const [transferQuantity, setTransferQuantity] = useState('');
+    const [transferNotes, setTransferNotes] = useState('');
+
+    const [transferLoading, setTransferLoading] = useState(false);
+    const [transferError, setTransferError] = useState('');
+
+    const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
+
+    const [adjustmentWarehouseId, setAdjustmentWarehouseId] = useState('');
+    const [adjustmentInventoryItemId, setAdjustmentInventoryItemId] = useState('');
+    const [adjustmentType, setAdjustmentType] = useState('increase');
+    const [adjustmentQuantity, setAdjustmentQuantity] = useState('');
+    const [adjustmentNotes, setAdjustmentNotes] = useState('');
+
+    const [adjustmentLoading, setAdjustmentLoading] = useState(false);
+    const [adjustmentError, setAdjustmentError] = useState('');
+
     const loadInventoryItems = async () => {
         try {
             const response = await axios.get('/api/inventory-items');
@@ -135,6 +157,120 @@ export default function Index() {
         }
     };
 
+    const handleTransferStock = async (e) => {
+        e.preventDefault();
+
+        setTransferError('');
+
+        if (!transferWarehouseId) {
+            setTransferError('Please select the source warehouse.');
+            return;
+        }
+
+        if (!transferToWarehouseId) {
+            setTransferError('Please select the destination warehouse.');
+            return;
+        }
+
+        if (transferWarehouseId === transferToWarehouseId) {
+            setTransferError(
+                'Source and destination warehouses must be different.'
+            );
+            return;
+        }
+
+        if (!transferInventoryItemId) {
+            setTransferError('Please select an inventory item.');
+            return;
+        }
+
+        if (!transferQuantity || Number(transferQuantity) <= 0) {
+            setTransferError('Quantity must be greater than zero.');
+            return;
+        }
+
+        setTransferLoading(true);
+
+        try {
+            await axios.post('/api/inventory/transfers', {
+                source_warehouse_id: Number(transferWarehouseId),
+                destination_warehouse_id: Number(transferToWarehouseId),
+                inventory_item_id: Number(transferInventoryItemId),
+                quantity: Number(transferQuantity),
+                notes: transferNotes || null,
+            });
+
+            setShowTransferModal(false);
+
+            setTransferWarehouseId('');
+            setTransferToWarehouseId('');
+            setTransferInventoryItemId('');
+            setTransferQuantity('');
+            setTransferNotes('');
+            setTransferError('');
+
+            await loadInventory();
+        } catch (err) {
+            setTransferError(
+                err.response?.data?.message ||
+                'Failed to transfer stock.'
+            );
+        } finally {
+            setTransferLoading(false);
+        }
+    };
+
+    const handleAdjustment = async (e) => {
+        e.preventDefault();
+
+        setAdjustmentError('');
+
+        if (!adjustmentWarehouseId) {
+            setAdjustmentError('Please select a warehouse.');
+            return;
+        }
+
+        if (!adjustmentInventoryItemId) {
+            setAdjustmentError('Please select an inventory item.');
+            return;
+        }
+
+        if (!adjustmentQuantity || Number(adjustmentQuantity) <= 0) {
+            setAdjustmentError('Quantity must be greater than zero.');
+            return;
+        }
+
+        setAdjustmentLoading(true);
+
+        try {
+            await axios.post('/api/inventory/adjustments', {
+                warehouse_id: Number(adjustmentWarehouseId),
+                inventory_item_id: Number(adjustmentInventoryItemId),
+                adjustment_type: adjustmentType,
+                quantity: Number(adjustmentQuantity),
+                notes: adjustmentNotes || null,
+            });
+
+            setShowAdjustmentModal(false);
+
+            setAdjustmentWarehouseId('');
+            setAdjustmentInventoryItemId('');
+            setAdjustmentType('increase');
+            setAdjustmentQuantity('');
+            setAdjustmentNotes('');
+            setAdjustmentError('');
+
+            await loadInventory();
+        } catch (err) {
+            setAdjustmentError(
+                err.response?.data?.message ||
+                'Failed to adjust stock.'
+            );
+        } finally {
+            setAdjustmentLoading(false);
+        }
+    };
+
     useEffect(() => {
         loadWarehouses();
         loadInventoryItems();
@@ -192,17 +328,50 @@ export default function Index() {
                             View current inventory stock across warehouses.
                         </p>
                     </div>
-
+                    <div>
                     <button
                         type="button"
                         onClick={() => {
                             setStockInError('');
                             setShowStockInModal(true);
                         }}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                        className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     >
                         Stock In
                     </button>
+
+                    <button
+                        type="button"
+                          onClick={() => {
+                            setTransferError('');
+                            setTransferWarehouseId('');
+                            setTransferToWarehouseId('');
+                            setTransferInventoryItemId('');
+                            setTransferQuantity('');
+                            setTransferNotes('');
+                            setShowTransferModal(true);
+                        }}
+                        className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                        Transfer Stock
+                    </button>
+
+                    <button
+                        type="button"
+                         onClick={() => {
+                            setAdjustmentError('');
+                            setAdjustmentWarehouseId('');
+                            setAdjustmentInventoryItemId('');
+                            setAdjustmentType('increase');
+                            setAdjustmentQuantity('');
+                            setAdjustmentNotes('');
+                            setShowAdjustmentModal(true);
+                        }}
+                        className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                        Adjust Stock
+                    </button>
+                    </div>        
                 </div>
 
             {/* Filters */}
@@ -636,6 +805,361 @@ export default function Index() {
                 </div>
             </div>
         )}
+
+        {/** stock transfer modal */}
+        {showTransferModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b px-6 py-4">
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            Transfer Stock
+                        </h2>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Transfer inventory between warehouses.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowTransferModal(false)}
+                        className="text-2xl text-gray-400 hover:text-gray-600"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    onSubmit={handleTransferStock}
+                    className="space-y-5 p-6"
+                >
+                    {transferError && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {transferError}
+                        </div>
+                    )}
+
+                    {/* From Warehouse */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            From Warehouse
+                        </label>
+
+                        <select
+                            value={transferWarehouseId}
+                            onChange={(e) =>
+                                setTransferWarehouseId(e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">
+                                Select source warehouse
+                            </option>
+
+                            {warehouses.map((warehouse) => (
+                                <option
+                                    key={warehouse.id}
+                                    value={warehouse.id}
+                                >
+                                    {warehouse.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* To Warehouse */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            To Warehouse
+                        </label>
+
+                        <select
+                            value={transferToWarehouseId}
+                            onChange={(e) =>
+                                setTransferToWarehouseId(e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">
+                                Select destination warehouse
+                            </option>
+
+                            {warehouses.map((warehouse) => (
+                                <option
+                                    key={warehouse.id}
+                                    value={warehouse.id}
+                                >
+                                    {warehouse.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Inventory Item */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Inventory Item
+                        </label>
+
+                        <select
+                            value={transferInventoryItemId}
+                            onChange={(e) =>
+                                setTransferInventoryItemId(e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">
+                                Select inventory item
+                            </option>
+
+                            {inventoryItems.map((item) => (
+                                <option
+                                    key={item.id}
+                                    value={item.id}
+                                >
+                                    {item.name} ({item.sku})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Quantity
+                        </label>
+
+                        <input
+                            type="number"
+                            min="0.001"
+                            step="0.001"
+                            value={transferQuantity}
+                            onChange={(e) =>
+                                setTransferQuantity(e.target.value)
+                            }
+                            placeholder="Enter quantity"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Notes
+                        </label>
+
+                        <textarea
+                            rows="3"
+                            value={transferNotes}
+                            onChange={(e) =>
+                                setTransferNotes(e.target.value)
+                            }
+                            placeholder="Optional transfer notes"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowTransferModal(false)}
+                            disabled={transferLoading}
+                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={transferLoading}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {transferLoading
+                                ? 'Transferring...'
+                                : 'Transfer Stock'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )}
+
+    {/** stock adjustment modal */}
+    {showAdjustmentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
+                <div className="flex items-center justify-between border-b px-6 py-4">
+                    <div>
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            Adjust Stock
+                        </h2>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Increase or decrease inventory stock.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => setShowAdjustmentModal(false)}
+                        className="text-2xl text-gray-400 hover:text-gray-600"
+                    >
+                        &times;
+                    </button>
+                </div>
+
+                <form
+                    onSubmit={handleAdjustment}
+                    className="space-y-5 p-6"
+                >
+                    {adjustmentError && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            {adjustmentError}
+                        </div>
+                    )}
+
+                    {/* Warehouse */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Warehouse
+                        </label>
+
+                        <select
+                            value={adjustmentWarehouseId}
+                            onChange={(e) =>
+                                setAdjustmentWarehouseId(e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">
+                                Select warehouse
+                            </option>
+
+                            {warehouses.map((warehouse) => (
+                                <option
+                                    key={warehouse.id}
+                                    value={warehouse.id}
+                                >
+                                    {warehouse.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Inventory Item */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Inventory Item
+                        </label>
+
+                        <select
+                            value={adjustmentInventoryItemId}
+                            onChange={(e) =>
+                                setAdjustmentInventoryItemId(e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">
+                                Select inventory item
+                            </option>
+
+                            {inventoryItems.map((item) => (
+                                <option
+                                    key={item.id}
+                                    value={item.id}
+                                >
+                                    {item.name} ({item.sku})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Adjustment Type */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Adjustment Type
+                        </label>
+
+                        <select
+                            value={adjustmentType}
+                            onChange={(e) =>
+                                setAdjustmentType(e.target.value)
+                            }
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="increase">
+                                Increase
+                            </option>
+
+                            <option value="decrease">
+                                Decrease
+                            </option>
+                        </select>
+                    </div>
+
+                    {/* Quantity */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Quantity
+                        </label>
+
+                        <input
+                            type="number"
+                            min="0.001"
+                            step="0.001"
+                            value={adjustmentQuantity}
+                            onChange={(e) =>
+                                setAdjustmentQuantity(e.target.value)
+                            }
+                            placeholder="Enter quantity"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Notes
+                        </label>
+
+                        <textarea
+                            rows="3"
+                            value={adjustmentNotes}
+                            onChange={(e) =>
+                                setAdjustmentNotes(e.target.value)
+                            }
+                            placeholder="Reason for adjustment"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={() => setShowAdjustmentModal(false)}
+                            disabled={adjustmentLoading}
+                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                        >
+                            Cancel
+                        </button>
+
+                        <button
+                            type="submit"
+                            disabled={adjustmentLoading}
+                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {adjustmentLoading
+                                ? 'Adjusting...'
+                                : 'Adjust Stock'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    )}
         </div>
         </AuthenticatedLayout>
     );
