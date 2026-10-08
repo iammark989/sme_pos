@@ -1270,79 +1270,167 @@ export default function POS() {
                 
                         {/* Products */}
                         <div className="lg:col-span-2">
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {products.map((product) => {
-                                    const cartItem = cart.find(
-                                        (item) => item.id === product.id
-                                    );
+                            <div className="mb-4 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900">
+                                        Products
+                                    </h2>
 
-                                    const cartQuantity =
-                                        cartItem?.quantity ?? 0;
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Select a product to add it to the cart.
+                                    </p>
+                                </div>
 
-                                    const canAdd =
-                                        product.can_sell &&
-                                        cartQuantity <
-                                            product.max_quantity;
-
-                                    return (
-                                        <div
-                                            key={product.id}
-                                            className="rounded-xl bg-white p-5 shadow-sm"
-                                        >
-                                            <h2 className="text-lg font-semibold text-gray-900">
-                                                {product.name}
-                                            </h2>
-
-                                            <p className="mt-2 text-xl font-bold text-blue-600">
-                                                ₱
-                                                {Number(
-                                                    product.selling_price
-                                                ).toFixed(2)}
-                                            </p>
-
-                                            <p className="mt-2 text-sm text-gray-500">
-                                                Available:{' '}
-                                                {product.max_quantity}
-                                            </p>
-
-                                            {cartQuantity > 0 && (
-                                                <p className="mt-1 text-sm font-medium text-blue-600">
-                                                    In cart: {cartQuantity}
-                                                </p>
-                                            )}
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    addToCart(product)
-                                                }
-                                                disabled={!canAdd}
-                                                className="mt-4 w-full rounded-lg bg-blue-600 px-4 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                                            >
-                                                {!product.can_sell
-                                                    ? 'Out of Stock'
-                                                    : cartQuantity >=
-                                                        product.max_quantity
-                                                      ? 'Maximum Reached'
-                                                      : 'Add to Cart'}
-                                            </button>
-                                        </div>
-                                    );
-                                })}
+                                <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
+                                    {products.length} product{products.length !== 1 ? 's' : ''}
+                                </span>
                             </div>
+
+                            {products.length === 0 ? (
+                                <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
+                                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
+                                        <span className="text-2xl text-gray-400">
+                                            🛒
+                                        </span>
+                                    </div>
+
+                                    <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                                        No Products Available
+                                    </h3>
+
+                                    <p className="mt-2 text-sm text-gray-500">
+                                        There are currently no products available for sale.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    {products.map((product) => {
+                                        const cartItem = cart.find(
+                                            (item) => item.id === product.id
+                                        );
+
+                                        const cartQuantity =
+                                            cartItem?.quantity ?? 0;
+
+                                        const canAdd =
+                                            product.can_sell &&
+                                            cartQuantity < product.max_quantity;
+
+                                        const isOutOfStock =
+                                            !product.can_sell ||
+                                            product.max_quantity <= 0;
+
+                                        const remainingQuantity = Math.max(
+                                            product.max_quantity - cartQuantity,
+                                            0
+                                        );
+
+                                        return (
+                                            <div
+                                                key={product.id}
+                                                className="rounded-xl bg-white p-5 shadow-sm transition hover:shadow-md"
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-gray-900">
+                                                            {product.name}
+                                                        </h3>
+
+                                                        {product.sku && (
+                                                            <p className="mt-1 text-xs text-gray-400">
+                                                                {product.sku}
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    <span
+                                                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                                                            isOutOfStock
+                                                                ? 'bg-red-100 text-red-700'
+                                                                : 'bg-green-100 text-green-700'
+                                                        }`}
+                                                    >
+                                                        {isOutOfStock
+                                                            ? 'Out of Stock'
+                                                            : 'Available'}
+                                                    </span>
+                                                </div>
+
+                                                <p className="mt-4 text-2xl font-bold text-blue-600">
+                                                    ₱
+                                                    {Number(
+                                                        product.selling_price
+                                                    ).toFixed(2)}
+                                                </p>
+
+                                                <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2">
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-500">
+                                                            Available
+                                                        </span>
+
+                                                        <span className="font-semibold text-gray-800">
+                                                            {product.max_quantity}
+                                                        </span>
+                                                    </div>
+
+                                                    {cartQuantity > 0 && (
+                                                        <div className="mt-1 flex items-center justify-between text-sm">
+                                                            <span className="text-gray-500">
+                                                                In cart
+                                                            </span>
+
+                                                            <span className="font-semibold text-blue-600">
+                                                                {cartQuantity}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addToCart(product)}
+                                                    disabled={!canAdd}
+                                                    className={`mt-4 w-full rounded-lg px-4 py-2.5 font-semibold transition ${
+                                                        canAdd
+                                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                            : 'cursor-not-allowed bg-gray-200 text-gray-500'
+                                                    }`}
+                                                >
+                                                    {isOutOfStock
+                                                        ? 'Out of Stock'
+                                                        : cartQuantity >=
+                                                            product.max_quantity
+                                                        ? 'Maximum Reached'
+                                                        : `Add to Cart${
+                                                                remainingQuantity > 0
+                                                                    ? ` (${remainingQuantity} left)`
+                                                                    : ''
+                                                            }`}
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                         {/* Cart */}
                         <div className="rounded-xl bg-white p-5 shadow-sm">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-lg font-bold text-gray-900">
-                                    Cart
-                                </h2>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900">
+                                        Cart
+                                    </h2>
 
-                                <span className="text-sm text-gray-500">
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Review your order before payment.
+                                    </p>
+                                </div>
+
+                                <span className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
                                     {cart.reduce(
-                                        (total, item) =>
-                                            total + item.quantity,
+                                        (total, item) => total + item.quantity,
                                         0
                                     )}{' '}
                                     item(s)
@@ -1350,98 +1438,122 @@ export default function POS() {
                             </div>
 
                             {cart.length === 0 ? (
-                                <div className="mt-6 rounded-lg bg-gray-50 p-6 text-center">
-                                    <p className="text-sm text-gray-500">
-                                        Your cart is empty.
+                                <div className="mt-6 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+                                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+                                        <span className="text-2xl">🛒</span>
+                                    </div>
+
+                                    <h3 className="mt-4 font-semibold text-gray-900">
+                                        Your cart is empty
+                                    </h3>
+
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Select a product to start a new sale.
                                     </p>
                                 </div>
                             ) : (
                                 <div className="mt-5 space-y-4">
-                                    {cart.map((item) => {
-                                        const itemSubtotal =
-                                            Number(item.selling_price) *
-                                            item.quantity;
+                                                {cart.map((item) => {
+                                const itemSubtotal =
+                                    Number(item.selling_price) *
+                                    item.quantity;
 
-                                        return (
-                                            <div
-                                                key={item.id}
-                                                className="border-b pb-4"
+                                const atMaximum =
+                                    item.quantity >= item.max_quantity;
+
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="rounded-xl border border-gray-200 p-4"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <h3 className="font-semibold text-gray-900">
+                                                    {item.name}
+                                                </h3>
+
+                                                <p className="mt-1 text-sm text-gray-500">
+                                                    ₱
+                                                    {Number(
+                                                        item.selling_price
+                                                    ).toFixed(2)}{' '}
+                                                    each
+                                                </p>
+                                            </div>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeFromCart(item.id)
+                                                }
+                                                className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 hover:text-red-700"
                                             >
-                                                <div className="flex items-start justify-between gap-3">
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-900">
-                                                            {item.name}
-                                                        </h3>
+                                                Remove
+                                            </button>
+                                        </div>
 
-                                                        <p className="text-sm text-gray-500">
-                                                            ₱
-                                                            {Number(
-                                                                item.selling_price
-                                                            ).toFixed(2)}{' '}
-                                                            each
-                                                        </p>
-                                                    </div>
+                                        <div className="mt-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="mb-1 text-xs text-gray-500">
+                                                    Quantity
+                                                </p>
+
+                                                <div className="flex items-center overflow-hidden rounded-lg border border-gray-300">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            decreaseQuantity(
+                                                                item.id
+                                                            )
+                                                        }
+                                                        aria-label={`Decrease ${item.name} quantity`}
+                                                        className="flex h-9 w-9 items-center justify-center text-lg font-medium text-gray-700 transition hover:bg-gray-100"
+                                                    >
+                                                        −
+                                                    </button>
+
+                                                    <span className="flex h-9 min-w-10 items-center justify-center border-x border-gray-300 px-2 text-sm font-bold text-gray-900">
+                                                        {item.quantity}
+                                                    </span>
 
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            removeFromCart(
+                                                            increaseQuantity(
                                                                 item.id
                                                             )
                                                         }
-                                                        className="text-sm text-red-600 hover:text-red-700"
+                                                        disabled={atMaximum}
+                                                        aria-label={`Increase ${item.name} quantity`}
+                                                        className="flex h-9 w-9 items-center justify-center text-lg font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30"
                                                     >
-                                                        Remove
+                                                        +
                                                     </button>
                                                 </div>
 
-                                                <div className="mt-3 flex items-center justify-between">
-                                                    <div className="flex items-center rounded-lg border border-gray-300">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                decreaseQuantity(
-                                                                    item.id
-                                                                )
-                                                            }
-                                                            className="px-3 py-1.5 text-lg text-gray-700 hover:bg-gray-100"
-                                                        >
-                                                            −
-                                                        </button>
-
-                                                        <span className="min-w-10 px-2 text-center font-semibold">
-                                                            {item.quantity}
-                                                        </span>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                increaseQuantity(
-                                                                    item.id
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                item.quantity >=
-                                                                item.max_quantity
-                                                            }
-                                                            className="px-3 py-1.5 text-lg text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                                                        >
-                                                            +
-                                                        </button>
-                                                    </div>
-
-                                                    <p className="font-semibold text-gray-900">
-                                                        ₱
-                                                        {itemSubtotal.toFixed(
-                                                            2
-                                                        )}
+                                                {atMaximum && (
+                                                    <p className="mt-1 text-xs text-amber-600">
+                                                        Maximum available quantity
+                                                        reached.
                                                     </p>
-                                                </div>
+                                                )}
                                             </div>
-                                        );
-                                    })}
 
-                                    {showPayment && (
+                                            <div className="text-right">
+                                                <p className="text-xs text-gray-500">
+                                                    Subtotal
+                                                </p>
+
+                                                <p className="mt-1 text-lg font-bold text-gray-900">
+                                                    ₱
+                                                    {itemSubtotal.toFixed(2)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                                                                {showPayment && (
                                     <div className="mt-6 rounded-xl bg-white p-6 shadow-sm lg:col-span-3">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -1463,8 +1575,9 @@ export default function POS() {
                                             </button>
                                         </div>
 
-                                        <div className="mt-6 grid gap-6 md:grid-cols-2">
-                                            {/* Order Summary */}
+                                        <div className="mt-6">
+                                            
+                                            {/* Order Summary 
                                             <div className="rounded-lg bg-gray-50 p-5">
                                                 <h3 className="font-semibold text-gray-900">
                                                     Order Summary
@@ -1500,125 +1613,240 @@ export default function POS() {
                                                         </span>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </div>*/}
 
                                             {/* Payment Details */}
                                             <div>
-                                                <h3 className="font-semibold text-gray-900">
-                                                    Payment Method
-                                                </h3>
+                                                <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-900">
+                                                        Payment Method
+                                                    </h3>
 
-                                                <div className="mt-4 grid grid-cols-2 gap-3">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setPaymentMethod('cash');
-                                                            setAmountPaid('');
-                                                            setPaymentReference('');
-                                                        }}
-                                                        className={`rounded-lg border px-4 py-3 font-semibold ${
-                                                            paymentMethod === 'cash'
-                                                                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                                                : 'border-gray-300 text-gray-700'
-                                                        }`}
-                                                    >
-                                                        Cash
-                                                    </button>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setPaymentMethod('gcash');
-                                                            setAmountPaid(cartTotal.toFixed(2));
-                                                        }}
-                                                        className={`rounded-lg border px-4 py-3 font-semibold ${
-                                                            paymentMethod === 'gcash'
-                                                                ? 'border-blue-600 bg-blue-50 text-blue-700'
-                                                                : 'border-gray-300 text-gray-700'
-                                                        }`}
-                                                    >
-                                                        GCash
-                                                    </button>
+                                                    <p className="mt-1 text-sm text-gray-500">
+                                                        Select how the customer will pay.
+                                                    </p>
                                                 </div>
 
-                                                {paymentMethod === 'cash' && (
-                                                    <div className="mt-5">
-                                                        <label
-                                                            htmlFor="amount-paid"
-                                                            className="mb-2 block text-sm font-medium text-gray-700"
-                                                        >
-                                                            Amount Paid
-                                                        </label>
+                                                <span className="text-sm font-medium text-gray-500">
+                                                    Total:{' '}
+                                                    <span className="font-bold text-gray-900">
+                                                        ₱{cartTotal.toFixed(2)}
+                                                    </span>
+                                                </span>
+                                            </div>
 
-                                                        <input
-                                                            id="amount-paid"
-                                                            type="number"
-                                                            min={cartTotal}
-                                                            step="0.01"
-                                                            value={amountPaid}
-                                                            onChange={(event) =>
-                                                                setAmountPaid(event.target.value)
-                                                            }
-                                                            className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                                            placeholder="Enter amount received"
-                                                        />
+                                                     {/* Payment Method Buttons */}
+                                                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setPaymentMethod('cash');
+                                                                    setAmountPaid('');
+                                                                    setPaymentReference('');
+                                                                }}
+                                                                className={`rounded-xl border-2 px-5 py-5 text-left transition ${
+                                                                    paymentMethod === 'cash'
+                                                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                                                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-bold">
+                                                                        Cash
+                                                                    </span>
 
-                                                        <div className="mt-4 flex justify-between rounded-lg bg-gray-50 px-4 py-3">
-                                                            <span className="text-gray-600">
-                                                                Change
-                                                            </span>
+                                                                    {paymentMethod === 'cash' && (
+                                                                        <span className="text-sm">
+                                                                            ✓
+                                                                        </span>
+                                                                    )}
+                                                                </div>
 
-                                                            <span className="font-bold text-gray-900">
-                                                                ₱{change.toFixed(2)}
-                                                            </span>
+                                                                <p className="mt-1 text-xs text-gray-500">
+                                                                    Pay with cash
+                                                                </p>
+                                                            </button>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setPaymentMethod('gcash');
+                                                                    setAmountPaid(cartTotal.toFixed(2));
+                                                                }}
+                                                                className={`rounded-xl border-2 px-5 py-5 text-left transition ${
+                                                                    paymentMethod === 'gcash'
+                                                                        ? 'border-blue-600 bg-blue-50 text-blue-700'
+                                                                        : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="font-bold">
+                                                                        GCash
+                                                                    </span>
+
+                                                                    {paymentMethod === 'gcash' && (
+                                                                        <span className="text-sm">
+                                                                            ✓
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                <p className="mt-1 text-xs text-gray-500">
+                                                                    Digital payment
+                                                                </p>
+                                                            </button>
                                                         </div>
 
-                                                        {amountPaid !== '' &&
-                                                            numericAmountPaid < cartTotal && (
-                                                                <p className="mt-2 text-sm text-red-600">
-                                                                    Amount paid must be at least ₱
-                                                                    {cartTotal.toFixed(2)}.
+                                                 {/* Cash Payment */}
+                                                    {paymentMethod === 'cash' && (
+                                                        <div className="mt-5 rounded-xl border border-gray-200 bg-white p-5">
+                                                            <label
+                                                                htmlFor="amount-paid"
+                                                                className="mb-2 block text-sm font-semibold text-gray-700"
+                                                            >
+                                                                Amount Received
+                                                            </label>
+
+                                                            <div className="relative">
+                                                                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">
+                                                                    ₱
+                                                                </span>
+
+                                                                <input
+                                                                    id="amount-paid"
+                                                                    type="number"
+                                                                    min={cartTotal}
+                                                                    step="0.01"
+                                                                    value={amountPaid}
+                                                                    onChange={(event) =>
+                                                                        setAmountPaid(event.target.value)
+                                                                    }
+                                                                    className={`w-full rounded-lg border py-3 pl-9 pr-4 text-lg font-semibold focus:outline-none focus:ring-2 ${
+                                                                        amountPaid !== '' &&
+                                                                        numericAmountPaid < cartTotal
+                                                                            ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
+                                                                            : 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                                                                    }`}
+                                                                    placeholder="0.00"
+                                                                />
+                                                            </div>
+
+                                                            {amountPaid !== '' &&
+                                                                numericAmountPaid < cartTotal && (
+                                                                    <p className="mt-2 text-sm font-medium text-red-600">
+                                                                        Insufficient payment. Customer still needs ₱
+                                                                        {(
+                                                                            cartTotal - numericAmountPaid
+                                                                        ).toFixed(2)}
+                                                                    </p>
+                                                                )}
+
+                                                            <div className="mt-4 rounded-xl bg-gray-50 p-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-sm text-gray-500">
+                                                                        Order Total
+                                                                    </span>
+
+                                                                    <span className="font-semibold text-gray-900">
+                                                                        ₱{cartTotal.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="mt-2 flex items-center justify-between border-t pt-3">
+                                                                    <span className="font-semibold text-gray-700">
+                                                                        Change
+                                                                    </span>
+
+                                                                    <span
+                                                                        className={`text-xl font-bold ${
+                                                                            cashPaymentValid
+                                                                                ? 'text-green-600'
+                                                                                : 'text-gray-400'
+                                                                        }`}
+                                                                    >
+                                                                        ₱{change.toFixed(2)}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                 {/* GCash Payment */}
+                                                    {paymentMethod === 'gcash' && (
+                                                        <div className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+                                                            <div className="flex items-center justify-between">
+                                                                <label
+                                                                    htmlFor="payment-reference"
+                                                                    className="block text-sm font-semibold text-gray-700"
+                                                                >
+                                                                    GCash Reference Number
+                                                                </label>
+
+                                                                <span className="text-xs font-medium text-red-500">
+                                                                    Required
+                                                                </span>
+                                                            </div>
+
+                                                            <input
+                                                                id="payment-reference"
+                                                                type="text"
+                                                                value={paymentReference}
+                                                                onChange={(event) =>
+                                                                    setPaymentReference(event.target.value)
+                                                                }
+                                                                className={`mt-2 w-full rounded-lg border px-4 py-3 text-lg font-medium focus:outline-none focus:ring-2 ${
+                                                                    paymentReference.trim() === ''
+                                                                        ? 'border-gray-300 focus:border-blue-500 focus:ring-blue-100'
+                                                                        : 'border-green-300 focus:border-green-500 focus:ring-green-100'
+                                                                }`}
+                                                                placeholder="Enter reference number"
+                                                            />
+
+                                                            <div className="mt-3 rounded-lg bg-blue-50 px-4 py-3">
+                                                                <p className="text-sm text-blue-700">
+                                                                    GCash payment amount:
+                                                                    <span className="ml-1 font-bold">
+                                                                        ₱{cartTotal.toFixed(2)}
+                                                                    </span>
                                                                 </p>
-                                                            )}
-                                                    </div>
-                                                )}
 
-                                                {paymentMethod === 'gcash' && (
-                                                    <div className="mt-5">
-                                                        <label
-                                                            htmlFor="payment-reference"
-                                                            className="mb-2 block text-sm font-medium text-gray-700"
-                                                        >
-                                                            GCash Reference Number
-                                                        </label>
+                                                                <p className="mt-1 text-xs text-blue-600">
+                                                                    The payment must exactly match the order total.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                {/* Complete Sale */}
+                                                <div className="mt-6">
+                                                    <button
+                                                        type="button"
+                                                        onClick={completeSale}
+                                                        disabled={!paymentValid || submitting}
+                                                        className={`w-full rounded-xl px-4 py-4 text-lg font-bold text-white transition ${
+                                                            paymentValid && !submitting
+                                                                ? 'bg-green-600 hover:bg-green-700'
+                                                                : 'cursor-not-allowed bg-gray-300'
+                                                        }`}
+                                                    >
+                                                        {submitting ? (
+                                                            <span className="flex items-center justify-center gap-2">
+                                                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                                                Processing Sale...
+                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                Complete Sale · ₱{cartTotal.toFixed(2)}
+                                                            </>
+                                                        )}
+                                                    </button>
 
-                                                        <input
-                                                            id="payment-reference"
-                                                            type="text"
-                                                            value={paymentReference}
-                                                            onChange={(event) =>
-                                                                setPaymentReference(
-                                                                    event.target.value
-                                                                )
-                                                            }
-                                                            className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                                            placeholder="Enter GCash reference number"
-                                                        />
-
-                                                        <p className="mt-2 text-sm text-gray-500">
-                                                            GCash payment must exactly match the total.
+                                                    {!paymentValid && !submitting && (
+                                                        <p className="mt-2 text-center text-xs text-gray-500">
+                                                            Complete the payment details above to continue.
                                                         </p>
-                                                    </div>
-                                                )}
-
-                                                <button
-                                                    type="button"
-                                                    onClick={completeSale}
-                                                    disabled={!paymentValid || submitting}
-                                                    className="mt-6 w-full rounded-lg bg-green-600 px-4 py-3 font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
-                                                >
-                                                    {submitting ? 'Processing...' : 'Complete Sale'}
-                                                </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1626,10 +1854,12 @@ export default function POS() {
                 
                                     {/* Total */}
                                     <div className="pt-2">
-                                        <div className="flex items-center justify-between text-lg font-bold text-gray-900">
-                                            <span>Total</span>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-gray-500">
+                                                Order Total
+                                            </span>
 
-                                            <span>
+                                            <span className="text-2xl font-bold text-gray-900">
                                                 ₱{cartTotal.toFixed(2)}
                                             </span>
                                         </div>
