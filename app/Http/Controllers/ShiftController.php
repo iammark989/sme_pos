@@ -90,6 +90,7 @@ class ShiftController extends Controller
         }
     }
 
+    
     public function current(Request $request): JsonResponse
     {
         $shift = $request->user()
@@ -103,12 +104,69 @@ class ShiftController extends Controller
             ->latest('opened_at')
             ->first();
 
+        if (!$shift) {
+            return response()->json([
+                'data' => [
+                    'shift' => null,
+                ],
+            ]);
+        }
+
+        $sales = $shift->sales()
+            ->with('payments')
+            ->get();
+
+        $completedSales = $sales->where('status', 'completed');
+        $voidedSales = $sales->where('status', 'voided');
+
+        $cashSales = $completedSales->filter(
+            fn ($sale) => $sale->payments->contains(
+                fn ($payment) => $payment->method === 'cash'
+            )
+        );
+
+        $gcashSales = $completedSales->filter(
+            fn ($sale) => $sale->payments->contains(
+                fn ($payment) => $payment->method === 'gcash'
+            )
+        );
+
         return response()->json([
             'data' => [
                 'shift' => $shift,
+                'summary' => [
+                    'cash' => [
+                        'transaction_count' => $cashSales->count(),
+                        'total_amount' => round(
+                            $cashSales->sum(
+                                fn ($sale) => (float) $sale->total_amount
+                            ),
+                            2
+                        ),
+                    ],
+                    'gcash' => [
+                        'transaction_count' => $gcashSales->count(),
+                        'total_amount' => round(
+                            $gcashSales->sum(
+                                fn ($sale) => (float) $sale->total_amount
+                            ),
+                            2
+                        ),
+                    ],
+                    'voids' => [
+                        'transaction_count' => $voidedSales->count(),
+                        'total_amount' => round(
+                            $voidedSales->sum(
+                                fn ($sale) => (float) $sale->total_amount
+                            ),
+                            2
+                        ),
+                    ],
+                ],
             ],
         ]);
     }
+
 
     public function close(Request $request): JsonResponse
 {

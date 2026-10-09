@@ -1019,7 +1019,7 @@ export default function Transactions() {
                                                     setVoidError('');
                                                     setShowVoidModal(true);
                                                 }}
-                                                className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700"
+                                                className="cursor-pointer rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700"
                                             >
                                                 Void Transaction
                                             </button>
@@ -1030,7 +1030,7 @@ export default function Transactions() {
                                                 setReceiptMode('preview');
                                                 setShowReceipt(true);
                                             }}
-                                            className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                            className="cursor-pointer rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
                                         >
                                             Receipt Preview
                                         </button>
@@ -1041,7 +1041,7 @@ export default function Transactions() {
                                                 setReceiptMode('reprint');
                                                 setShowReceipt(true);
                                             }}
-                                            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                            className="cursor-pointer rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                                         >
                                             Reprint Receipt
                                         </button>
@@ -1049,7 +1049,7 @@ export default function Transactions() {
                                         <button
                                             type="button"
                                             onClick={() => setSelectedTransaction(null)}
-                                            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                            className="cursor-pointer rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                                         >
                                             Close
                                         </button>
@@ -1126,7 +1126,7 @@ export default function Transactions() {
                                     setVoidError('');
                                 }}
                                 disabled={voidLoading}
-                                className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="cursor-pointer rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -1138,7 +1138,7 @@ export default function Transactions() {
                                     voidLoading ||
                                     !voidReason.trim()
                                 }
-                                className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="cursor-pointer rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {voidLoading
                                     ? 'Voiding...'
@@ -1380,7 +1380,7 @@ export default function Transactions() {
                             <button
                                 type="button"
                                 onClick={() => setShowReceipt(false)}
-                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                className="cursor-pointer rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
                                 Close
                             </button>
@@ -1388,7 +1388,7 @@ export default function Transactions() {
                             <button
                                 type="button"
                                 onClick={() => window.print()}
-                                className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                                className="cursor-pointer rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
                             >
                                 Print Receipt
                             </button>
