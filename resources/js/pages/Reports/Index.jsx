@@ -266,7 +266,7 @@ export default function ReportsIndex() {
                                         !dateFrom ||
                                         !dateTo
                                     }
-                                    className="flex-1 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="cursor-pointer flex-1 rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {loadingReport
                                         ? 'Loading...'
@@ -277,7 +277,7 @@ export default function ReportsIndex() {
                                     type="button"
                                     onClick={handleReset}
                                     disabled={loadingReport}
-                                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Reset
                                 </button>
