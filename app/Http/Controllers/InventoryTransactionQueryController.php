@@ -102,6 +102,49 @@ class InventoryTransactionQueryController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | Inventory Movement Summary
+        |--------------------------------------------------------------------------
+        | Calculate totals across all filtered transactions, before pagination.
+        */
+
+        $summary = (clone $query)
+            ->selectRaw("
+                COUNT(*) AS total_transactions,
+
+                SUM(CASE WHEN type = 'stock_in' THEN 1 ELSE 0 END)
+                    AS stock_in_count,
+                COALESCE(SUM(CASE WHEN type = 'stock_in' THEN quantity ELSE 0 END), 0)
+                    AS stock_in_quantity,
+
+                SUM(CASE WHEN type = 'sale' THEN 1 ELSE 0 END)
+                    AS sale_count,
+                COALESCE(SUM(CASE WHEN type = 'sale' THEN quantity ELSE 0 END), 0)
+                    AS sale_quantity,
+
+                SUM(CASE WHEN type = 'sale_reversal' THEN 1 ELSE 0 END)
+                    AS sale_reversal_count,
+                COALESCE(SUM(CASE WHEN type = 'sale_reversal' THEN quantity ELSE 0 END), 0)
+                    AS sale_reversal_quantity,
+
+                SUM(CASE WHEN type = 'adjustment' THEN 1 ELSE 0 END)
+                    AS adjustment_count,
+                COALESCE(SUM(CASE WHEN type = 'adjustment' THEN quantity ELSE 0 END), 0)
+                    AS adjustment_quantity,
+
+                SUM(CASE WHEN type = 'transfer_in' THEN 1 ELSE 0 END)
+                    AS transfer_in_count,
+                COALESCE(SUM(CASE WHEN type = 'transfer_in' THEN quantity ELSE 0 END), 0)
+                    AS transfer_in_quantity,
+
+                SUM(CASE WHEN type = 'transfer_out' THEN 1 ELSE 0 END)
+                    AS transfer_out_count,
+                COALESCE(SUM(CASE WHEN type = 'transfer_out' THEN quantity ELSE 0 END), 0)
+                    AS transfer_out_quantity
+            ")
+            ->first();
+
+        /*
+        |--------------------------------------------------------------------------
         | Pagination
         |--------------------------------------------------------------------------
         */
@@ -115,13 +158,13 @@ class InventoryTransactionQueryController extends Controller
             ->latest('id')
             ->paginate($perPage);
 
-        /*
+         /*
         |--------------------------------------------------------------------------
-        | Transaction Category
+        | Transaction Category and Related Warehouse Access
         |--------------------------------------------------------------------------
         */
 
-        $transactions->getCollection()->transform(function ($transaction) {
+        $transactions->getCollection()->transform(function ($transaction) use ($user) {
             $transaction->transaction_category = match ($transaction->type) {
                 'stock_in' => 'Stock In',
                 'sale' => 'Sale',
@@ -131,12 +174,30 @@ class InventoryTransactionQueryController extends Controller
                 default => 'Other',
             };
 
-            $transaction->related_warehouse = $transaction->relatedWarehouse();
+            $relatedWarehouse = $transaction->relatedWarehouse();
+
+            // Only expose related warehouses the current user may access.
+            if (
+                $relatedWarehouse
+                && $relatedWarehouse->is_active
+                && (
+                    $user->hasGlobalAccess()
+                    || (
+                        $user->branch_id !== null
+                        && (int) $relatedWarehouse->branch_id === (int) $user->branch_id
+                    )
+                )
+            ) {
+                $transaction->related_warehouse = $relatedWarehouse;
+            } else {
+                $transaction->related_warehouse = null;
+            }
 
             return $transaction;
         });
-
+         
         return response()->json([
+            'summary' => $summary,
             'data' => $transactions,
         ]);
     }

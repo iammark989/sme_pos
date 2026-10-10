@@ -1,35 +1,19 @@
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout';
-
 import { useEffect, useState } from 'react';
 
-
-
 export default function ReportsIndex() {
-
     const today = new Date().toISOString().split('T')[0];
-
     const [activeTab, setActiveTab] = useState('range');
-
     const [branches, setBranches] = useState([]);
-
     const [branchId, setBranchId] = useState('');
 
-
-
     const [dateFrom, setDateFrom] = useState(today);
-
     const [dateTo, setDateTo] = useState(today);
 
-
-
     const [report, setReport] = useState(null);
-
     const [productDate, setProductDate] = useState(today);
-
     const [productReport, setProductReport] = useState(null);
-
     const [loadingProducts, setLoadingProducts] = useState(false);
-
     const [productError, setProductError] = useState('');
 
     const [inventoryView, setInventoryView] = useState('stocks');
@@ -42,284 +26,197 @@ export default function ReportsIndex() {
     const [loadingInventory, setLoadingInventory] = useState(false);
     const [inventoryError, setInventoryError] = useState('');
 
+    const [warehouses, setWarehouses] = useState([]);
+    const [loadingWarehouses, setLoadingWarehouses] = useState(false);
 
+    const [inventorySummary, setInventorySummary] = useState(null);
 
     const [loadingBranches, setLoadingBranches] = useState(true);
-
     const [loadingReport, setLoadingReport] = useState(false);
-
-
 
     const [error, setError] = useState('');
 
-
-
     useEffect(() => {
-
         loadBranches();
-
+        loadWarehouses();
     }, []);
 
-
-
-    const loadBranches = async () => {
-
+    const loadWarehouses = async () => {
         try {
-
-            setLoadingBranches(true);
-
-            setError('');
-
-
-
-            const response = await fetch('/api/branches', {
-
+            setLoadingWarehouses(true);
+            const response = await fetch('/api/warehouses', {
                 headers: {
-
                     Accept: 'application/json',
-
                 },
-
             });
-
-
 
             const result = await response.json();
 
-
-
             if (!response.ok) {
-
                 throw new Error(
-
-                    result.message || 'Failed to load branches.'
-
+                    result.message || 'Failed to load warehouses.'
                 );
-
             }
 
+            const warehouseData = result.data?.data ?? result.data ?? [];
 
-
-            setBranches(result.data ?? []);
-
+            setWarehouses(
+                Array.isArray(warehouseData) ? warehouseData : []
+            );
         } catch (err) {
-
-            setError(err.message || 'Failed to load branches.');
-
+            console.error('Failed to load warehouses:', err);
+            setWarehouses([]);
         } finally {
-
-            setLoadingBranches(false);
-
+            setLoadingWarehouses(false);
         }
-
     };
 
-
-
-    const loadReport = async () => {
-
+    const loadBranches = async () => {
         try {
-
-            setLoadingReport(true);
-
+            setLoadingBranches(true);
             setError('');
 
-
-
-            if (!dateFrom || !dateTo) {
-
-                throw new Error(
-
-                    'Please select both start and end dates.'
-
-                );
-
-            }
-
-
-
-            if (dateFrom > dateTo) {
-
-                throw new Error(
-
-                    'The start date cannot be later than the end date.'
-
-                );
-
-            }
-
-
-
-            const params = new URLSearchParams({
-
-                date_from: dateFrom,
-
-                date_to: dateTo,
-
+            const response = await fetch('/api/branches', {
+                headers: {
+                    Accept: 'application/json',
+                },
             });
-
-
-
-            if (branchId) {
-
-                params.append('branch_id', branchId);
-
-            }
-
-
-
-            const response = await fetch(
-
-                `/api/reports/sales?${params.toString()}`,
-
-                {
-
-                    headers: {
-
-                        Accept: 'application/json',
-
-                    },
-
-                }
-
-            );
-
-
 
             const result = await response.json();
 
-
-
             if (!response.ok) {
-
                 throw new Error(
-
-                    result.message ||
-
-                        'Failed to load sales report.'
-
+                    result.message || 'Failed to load branches.'
                 );
-
             }
 
-
-
-            setReport(result.data);
-
+            setBranches(result.data ?? []);
         } catch (err) {
+            setError(err.message || 'Failed to load branches.');
+        } finally {
+            setLoadingBranches(false);
+        }
+    };
 
-            setError(
+    const loadReport = async () => {
+        try {
+            setLoadingReport(true);
+            setError('');
 
-                err.message || 'Failed to load sales report.'
+            if (!dateFrom || !dateTo) {
+                throw new Error(
+                    'Please select both start and end dates.'
+                );
+            }
 
+            if (dateFrom > dateTo) {
+                throw new Error(
+                    'The start date cannot be later than the end date.'
+                );
+            }
+
+            const params = new URLSearchParams({
+                date_from: dateFrom,
+                date_to: dateTo,
+            });
+
+            if (branchId) {
+                params.append('branch_id', branchId);
+            }
+
+            const response = await fetch(
+                `/api/reports/sales?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                }
             );
 
+            const result = await response.json();
 
+            if (!response.ok) {
+                throw new Error(
+                    result.message ||
+                        'Failed to load sales report.'
+                );
+            }
+
+            setReport(result.data);
+        } catch (err) {
+            setError(
+                err.message || 'Failed to load sales report.'
+            );
 
             setReport(null);
 
         } finally {
-
             setLoadingReport(false);
-
         }
-
     };
 
-
-
     const loadProductReport = async () => {
-
         try {
-
             setLoadingProducts(true);
-
             setProductError('');
 
-
-
             if (!productDate) {
-
                 throw new Error('Please select a date for the product sales report.');
-
             }
-
-
 
             const params = new URLSearchParams({ date: productDate });
 
-
-
             if (branchId) {
-
                 params.append('branch_id', branchId);
-
             }
 
-
-
             const response = await fetch(
-
                 `/api/reports/sales/daily/products?${params.toString()}`,
-
                 {
-
                     headers: {
-
                         Accept: 'application/json',
-
                     },
-
                 }
-
             );
-
-
 
             const result = await response.json();
 
-
-
             if (!response.ok) {
-
                 throw new Error(
-
                     result.message || 'Failed to load daily product sales report.'
-
                 );
-
             }
-
-
 
             setProductReport(result.data);
 
         } catch (err) {
-
             setProductError(
-
                 err.message || 'Failed to load daily product sales report.'
-
             );
-
             setProductReport(null);
-
         } finally {
-
             setLoadingProducts(false);
-
         }
-
     };
-
-
-
-
 
     const loadInventoryReport = async (page = 1, view = inventoryView) => {
         try {
             setLoadingInventory(true);
             setInventoryError('');
+            
+            if (
+                view === 'movement' &&
+                inventoryDateFrom &&
+                inventoryDateTo &&
+                inventoryDateFrom > inventoryDateTo
+            ) {
+                setInventoryResult(null);
+                setInventoryPage(1);
+                setInventoryError(
+                    'The start date cannot be later than the end date.'
+                );
+                return;
+            }
 
             const params = new URLSearchParams({
                 page: String(page),
@@ -354,6 +251,7 @@ export default function ReportsIndex() {
             }
 
             // Both endpoints return { data: paginator }.
+            setInventorySummary(result.summary ?? null);
             setInventoryResult(result.data ?? null);
             setInventoryPage(page);
         } catch (err) {
@@ -373,22 +271,11 @@ export default function ReportsIndex() {
 
     const handleReset = () => {
 
-
-
         setDateFrom(today);
-
-
-
         setDateTo(today);
-
-
-
         setBranchId('');
-
         setProductDate(today);
-
         setProductReport(null);
-
         setProductError('');
         setInventorySearch('');
         setInventoryWarehouseId('');
@@ -397,165 +284,269 @@ export default function ReportsIndex() {
         setInventoryResult(null);
         setInventoryError('');
         setInventoryPage(1);
-
+        setInventorySummary(null);
         setReport(null);
-
-
-
         setError('');
 
-
-
     };
-
-
 
     const formatCurrency = (value) => {
-
         return `₱${Number(value ?? 0).toLocaleString('en-PH', {
-
             minimumFractionDigits: 2,
-
             maximumFractionDigits: 2,
-
         })}`;
-
     };
-
-
 
     const getBranchName = () => {
-
         if (!branchId) {
-
             return 'All Branches';
-
         }
 
-
-
         const branch = branches.find(
-
             (item) => String(item.id) === String(branchId)
-
         );
 
-
-
         return branch
-
             ? `${branch.name} (${branch.code})`
-
             : 'Selected Branch';
-
     };
 
+    function downloadCsv(filename, headers, rows) {
+        const escapeCsvValue = (value) => {
+            let text = String(value ?? '');
+
+            // Prevent spreadsheet formula injection.
+            if (/^[\t\r ]*[=+\-@]/.test(text)) {
+                text = `'${text}`;
+            }
+
+            return `"${text.replace(/"/g, '""')}"`;
+        };
+
+        const csvContent = [
+            headers.map(escapeCsvValue).join(','),
+            ...rows.map((row) => row.map(escapeCsvValue).join(',')),
+        ].join('\r\n');
+
+        // UTF-8 BOM helps Excel display the CSV correctly.
+        const blob = new Blob(['\uFEFF', csvContent], {
+            type: 'text/csv;charset=utf-8;',
+        });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+    }
+
+    const exportSalesRangeCsv = () => {
+        if (!report) {
+            return;
+        }
+
+        const rows = (report.daily_sales ?? []).map((day) => [
+            day.date,
+            Number(day.transaction_count ?? 0),
+            Number(day.gross_sales ?? 0).toFixed(2),
+            Number(day.discounts ?? 0).toFixed(2),
+            Number(day.net_sales ?? 0).toFixed(2),
+        ]);
+
+        downloadCsv(
+            `sales-report-${dateFrom}-to-${dateTo}.csv`,
+            [
+                'Date',
+                'Transactions',
+                'Gross Sales',
+                'Discounts',
+                'Net Sales',
+            ],
+            rows
+        );
+    };
+
+    const exportProductSalesCsv = () => {
+        if (!productReport) {
+            return;
+        }
+
+        const rows = (productReport.products ?? []).map((product) => [
+            product.sku ?? '',
+            product.product_name ?? '',
+            Number(product.quantity_sold ?? 0),
+            Number(product.gross_sales ?? 0).toFixed(2),
+        ]);
+
+        downloadCsv(
+            `daily-product-sales-${productReport.date || productDate}.csv`,
+            ['SKU', 'Product Name', 'Quantity Sold', 'Gross Sales'],
+            rows
+        );
+    };
+
+    
+    const exportInventoryStocksCsv = async () => {
+        if (inventoryView === 'movement') {
+            return;
+        }
+
+        try {
+            setLoadingInventory(true);
+            setInventoryError('');
+
+            const allRows = [];
+            let page = 1;
+            let lastPage = 1;
+
+            do {
+                const params = new URLSearchParams({
+                    page: String(page),
+                    per_page: '100',
+                });
+
+                if (inventorySearch.trim()) {
+                    params.append('search', inventorySearch.trim());
+                }
+
+                if (inventoryWarehouseId.trim()) {
+                    params.append('warehouse_id', inventoryWarehouseId.trim());
+                }
+
+                if (inventoryView === 'low-stock') {
+                    params.append('low_stock', '1');
+                }
+
+                const response = await fetch(
+                    `/api/inventory/stocks?${params.toString()}`,
+                    {
+                        headers: { Accept: 'application/json' },
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || 'Failed to export inventory report.'
+                    );
+                }
+
+                const paginator = result.data;
+                const pageRows = Array.isArray(paginator?.data)
+                    ? paginator.data
+                    : [];
+
+                allRows.push(...pageRows);
+                lastPage = Number(paginator?.last_page ?? 1);
+                page += 1;
+            } while (page <= lastPage);
+
+            const rows = allRows.map((row) => {
+                const item = row.inventory_item ?? row.inventoryItem ?? {};
+                const warehouse = row.warehouse ?? {};
+                const uom = item.uom ?? {};
+                const quantity = Number(row.quantity ?? 0);
+                const reorderLevel = Number(item.reorder_level ?? 0);
+                const isLow = row.is_low_stock ?? (quantity <= reorderLevel);
+
+                return [
+                    item.sku ?? '',
+                    item.name ?? '',
+                    warehouse.name ?? '',
+                    warehouse.branch?.name ?? '',
+                    quantity,
+                    uom.abbreviation ?? uom.symbol ?? uom.name ?? '',
+                    reorderLevel,
+                    isLow ? 'Low Stock' : 'In Stock',
+                ];
+            });
+
+            const filename = inventoryView === 'low-stock'
+                ? 'inventory-low-stock.csv'
+                : 'inventory-stock-on-hand.csv';
+
+            downloadCsv(
+                filename,
+                [
+                    'SKU',
+                    'Item',
+                    'Warehouse',
+                    'Branch',
+                    'Quantity',
+                    'UOM',
+                    'Reorder Level',
+                    'Status',
+                ],
+                rows
+            );
+        } catch (err) {
+            setInventoryError(
+                err.message || 'Failed to export inventory report.'
+            );
+        } finally {
+            setLoadingInventory(false);
+        }
+    };
 
 
     return (
-
         <AuthenticatedLayout>
-
             <div className="min-h-screen bg-gray-100 p-6">
-
                 <div className="mx-auto max-w-7xl">
 
-
-
                     {/* Header */}
-
                     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-
                         <div>
-
                             <h1 className="text-3xl font-bold text-gray-900">
-
                                 Sales Reports
-
                             </h1>
 
-
-
                             <p className="mt-1 text-gray-600">
-
                                 View sales performance by branch and
-
                                 reporting period.
-
                             </p>
-
                         </div>
-
-
 
                         <div className="flex flex-wrap gap-2">
-
                             <a
-
                                 href="/reports/transactions"
-
                                 className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-
                             >
-
                                 Transaction History
-
                             </a>
-
-
 
                             <a
-
                                 href="/shifts"
-
                                 className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
-
                             >
-
                                 Shifts History
-
                             </a>
-
                         </div>
-
                     </div>
 
-
-
                     {/* Report Tabs */}
-
                     <div className="mb-6 rounded-xl bg-white p-2 shadow-sm">
-
                         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Reports">
-
                             <button
-
                                 type="button"
-
                                 role="tab"
-
                                 id="sales-range-tab"
-
                                 aria-selected={activeTab === 'range'}
-
                                 aria-controls="sales-range-panel"
-
                                 onClick={() => setActiveTab('range')}
-
                                 className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
-
                                     activeTab === 'range'
-
                                         ? 'bg-blue-600 text-white shadow-sm'
-
                                         : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer'
-
                                 }`}
-
                             >
-
                                 Sales by Date Range
-
                             </button>
 
                             <button
@@ -870,119 +861,72 @@ export default function ReportsIndex() {
                     {/* Report Results */}
 
                     {report && (
-
                         <>
-
                             {/* Report Context */}
-
                             <div className="mb-6 rounded-xl bg-white px-6 py-4 shadow-sm">
+                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-8">
+                                        <div>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                                Reporting Period
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {dateFrom} — {dateTo}
+                                            </p>
+                                        </div>
 
-                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-
-                                    <div>
-
-                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-
-                                            Reporting Period
-
-                                        </p>
-
-
-
-                                        <p className="mt-1 text-sm font-semibold text-gray-900">
-
-                                            {dateFrom} — {dateTo}
-
-                                        </p>
-
+                                        <div>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                                Branch
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {getBranchName()}
+                                            </p>
+                                        </div>
                                     </div>
 
-
-
-                                    <div>
-
-                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-
-                                            Branch
-
-                                        </p>
-
-
-
-                                        <p className="mt-1 text-sm font-semibold text-gray-900">
-
-                                            {getBranchName()}
-
-                                        </p>
-
-                                    </div>
-
+                                    <button
+                                        type="button"
+                                        onClick={exportSalesRangeCsv}
+                                        disabled={!report}
+                                        className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Export CSV
+                                    </button>
                                 </div>
 
                             </div>
 
-
-
                             {/* Summary */}
-
                             <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
-
-
                                 <SummaryCard
-
                                     title="Transactions"
-
                                     value={
-
                                         report.summary
-
                                             ?.transaction_count ?? 0
-
                                     }
-
                                 />
 
-
-
                                 <SummaryCard
-
                                     title="Gross Sales"
-
                                     value={formatCurrency(
-
                                         report.summary?.gross_sales
-
                                     )}
-
                                 />
 
-
-
                                 <SummaryCard
-
                                     title="Discounts"
-
                                     value={formatCurrency(
-
                                         report.summary?.discounts
-
                                     )}
-
                                 />
 
-
-
                                 <SummaryCard
-
                                     title="Net Sales"
-
                                     value={formatCurrency(
-
                                         report.summary?.net_sales
-
                                     )}
-
                                 />
 
                             </div>
@@ -990,59 +934,34 @@ export default function ReportsIndex() {
 
 
                             {/* Payment Summary */}
-
                             <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
-
                                 <div className="mb-5">
-
                                     <h2 className="text-lg font-semibold text-gray-900">
-
                                         Payment Summary
-
                                     </h2>
 
-
-
                                     <p className="mt-1 text-sm text-gray-500">
-
                                         Sales grouped by payment method.
-
                                     </p>
-
                                 </div>
-
-
 
                                 <div className="grid gap-4 sm:grid-cols-2">
 
                                     <SummaryCard
-
                                         title="Cash Sales"
-
                                         value={formatCurrency(
-
                                             report.summary?.cash_sales
-
                                         )}
-
                                     />
 
-
-
                                     <SummaryCard
-
                                         title="GCash Sales"
-
                                         value={formatCurrency(
-
                                             report.summary?.gcash_sales
-
                                         )}
-
                                     />
 
                                 </div>
-
                             </div>
 
 
@@ -1310,113 +1229,77 @@ export default function ReportsIndex() {
 
 
                         {productReport && (
-
                             <>
+                                <div className="mb-4 flex flex-col gap-4 rounded-lg bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-col gap-2 sm:flex-row sm:gap-8">
+                                        <div>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                                Sales Date
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {productReport.date}
+                                            </p>
+                                        </div>
 
-                                <div className="mb-4 flex flex-col gap-2 rounded-lg bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-
-                                    <div>
-
-                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-
-                                            Sales Date
-
-                                        </p>
-
-                                        <p className="mt-1 text-sm font-semibold text-gray-900">
-
-                                            {productReport.date}
-
-                                        </p>
-
+                                        <div>
+                                            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                                Branch
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {getBranchName()}
+                                            </p>
+                                        </div>
                                     </div>
 
-                                    <div>
-
-                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-
-                                            Branch
-
-                                        </p>
-
-                                        <p className="mt-1 text-sm font-semibold text-gray-900">
-
-                                            {getBranchName()}
-
-                                        </p>
-
-                                    </div>
-
+                                    <button
+                                        type="button"
+                                        onClick={exportProductSalesCsv}
+                                        className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
+                                    >
+                                        Export CSV
+                                    </button>
                                 </div>
-
-
 
                                 <div className="mb-4 grid gap-4 sm:grid-cols-2">
 
                                     <SummaryCard
-
                                         title="Products Sold"
-
                                         value={Number(productReport.products?.length ?? 0).toLocaleString('en-PH')}
-
                                     />
 
                                     <SummaryCard
-
                                         title="Total Product Gross Sales"
-
                                         value={formatCurrency(
-
                                             (productReport.products ?? []).reduce(
-
                                                 (total, product) => total + Number(product.gross_sales ?? 0),
-
                                                 0
-
                                             )
-
                                         )}
-
                                     />
 
                                 </div>
 
-
-
                                 {Array.isArray(productReport.products) && productReport.products.length > 0 ? (
 
                                     <div className="overflow-x-auto">
-
                                         <table className="min-w-full divide-y divide-gray-200">
-
                                             <thead className="bg-gray-50">
-
                                                 <tr>
-
                                                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-
                                                         SKU
-
                                                     </th>
 
                                                     <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-
                                                         Product Name
-
                                                     </th>
 
                                                     <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-
                                                         Quantity Sold
-
                                                     </th>
 
                                                     <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-
                                                         Gross Sales
-
                                                     </th>
-
                                                 </tr>
 
                                             </thead>
@@ -1424,81 +1307,53 @@ export default function ReportsIndex() {
                                             <tbody className="divide-y divide-gray-200 bg-white">
 
                                                 {productReport.products.map((product) => (
-
                                                     <tr key={product.product_id}>
-
                                                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
-
                                                             {product.sku || '—'}
-
                                                         </td>
 
                                                         <td className="px-4 py-3 text-sm font-medium text-gray-900">
-
                                                             {product.product_name}
-
                                                         </td>
 
                                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
-
                                                             {Number(product.quantity_sold ?? 0).toLocaleString('en-PH')}
-
                                                         </td>
 
                                                         <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">
-
                                                             {formatCurrency(product.gross_sales)}
-
                                                         </td>
 
                                                     </tr>
-
                                                 ))}
-
                                             </tbody>
 
                                             <tfoot className="bg-gray-50">
 
                                                 <tr>
-
                                                     <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900">
-
                                                         Total
-
                                                     </td>
 
                                                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">
-
                                                         {productReport.products.reduce(
-
                                                             (total, product) => total + Number(product.quantity_sold ?? 0),
-
                                                             0
-
                                                         ).toLocaleString('en-PH')}
-
                                                     </td>
 
                                                     <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-bold text-gray-900">
 
                                                         {formatCurrency(
-
                                                             productReport.products.reduce(
-
                                                                 (total, product) => total + Number(product.gross_sales ?? 0),
-
                                                                 0
-
                                                             )
-
                                                         )}
-
                                                     </td>
 
                                                 </tr>
-
                                             </tfoot>
-
                                         </table>
 
                                     </div>
@@ -1506,18 +1361,11 @@ export default function ReportsIndex() {
                                 ) : (
 
                                     <p className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-
                                         No completed product sales found for the selected date and branch.
-
                                     </p>
-
                                 )}
-
                             </>
-
                         )}
-
-
 
                         {!productReport && !loadingProducts && !productError && (
 
@@ -1579,32 +1427,60 @@ export default function ReportsIndex() {
                                             id="inventory_search"
                                             type="text"
                                             value={inventorySearch}
-                                            onChange={(event) => setInventorySearch(event.target.value)}
+                                            onChange={(event) => {
+                                                    setInventorySearch(event.target.value);
+                                                    setInventoryPage(1);
+                                                    setInventoryResult(null);
+                                                }}
                                             placeholder="Product name or SKU"
                                             className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
                                         />
                                     </div>
                                     <div>
-                                        <label htmlFor="inventory_warehouse_id" className="mb-2 block text-sm font-medium text-gray-700">Warehouse ID (optional)</label>
-                                        <input
+                                        <label
+                                            htmlFor="inventory_warehouse_id"
+                                            className="mb-2 block text-sm font-medium text-gray-700"
+                                        >
+                                            Warehouse (optional)
+                                        </label>
+
+                                        <select
                                             id="inventory_warehouse_id"
-                                            type="number"
-                                            min="1"
                                             value={inventoryWarehouseId}
-                                            onChange={(event) => setInventoryWarehouseId(event.target.value)}
-                                            placeholder="All accessible warehouses"
-                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                                        />
+                                            onChange={(event) => {
+                                                setInventoryWarehouseId(event.target.value);
+                                                setInventoryPage(1);
+                                                setInventoryResult(null);
+                                            }}
+                                            disabled={loadingWarehouses}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+                                        >
+                                            <option value="">
+                                                All accessible warehouses
+                                            </option>
+
+                                            {warehouses.map((warehouse) => (
+                                                <option
+                                                    key={warehouse.id}
+                                                    value={warehouse.id}
+                                                >
+                                                    {warehouse.name}
+                                                    {warehouse.branch?.name
+                                                        ? ` — ${warehouse.branch.name}`
+                                                        : ''}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     {inventoryView === 'movement' && (
                                         <>
                                             <div>
                                                 <label htmlFor="inventory_date_from" className="mb-2 block text-sm font-medium text-gray-700">Date From</label>
-                                                <input id="inventory_date_from" type="date" value={inventoryDateFrom} onChange={(event) => setInventoryDateFrom(event.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none" />
+                                                <input id="inventory_date_from" type="date" value={inventoryDateFrom} onChange={(event) => {setInventoryDateFrom(event.target.value);setInventoryPage(1);setInventoryResult(null);}} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none" />
                                             </div>
                                             <div>
                                                 <label htmlFor="inventory_date_to" className="mb-2 block text-sm font-medium text-gray-700">Date To</label>
-                                                <input id="inventory_date_to" type="date" value={inventoryDateTo} onChange={(event) => setInventoryDateTo(event.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none" />
+                                                <input id="inventory_date_to" type="date" value={inventoryDateTo} onChange={(event) => {setInventoryDateTo(event.target.value);setInventoryPage(1);setInventoryResult(null);}} className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none" />
                                             </div>
                                         </>
                                     )}
@@ -1625,6 +1501,18 @@ export default function ReportsIndex() {
                                     }} disabled={loadingInventory} className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50">
                                         Reset Filters
                                     </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={exportInventoryStocksCsv}
+                                        disabled={
+                                            loadingInventory ||
+                                            inventoryView === 'movement'
+                                        }
+                                        className="cursor-pointer rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Export CSV
+                                    </button>
                                 </div>
 
                                 {inventoryError && <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{inventoryError}</div>}
@@ -1642,6 +1530,68 @@ export default function ReportsIndex() {
                                                     {inventoryView === 'stocks' ? 'Stock on Hand' : inventoryView === 'low-stock' ? 'Low Stock Items' : 'Inventory Movement'}
                                                 </p>
                                             </div>
+
+                            {/* Inventory Movement Summary */}
+                            {inventoryView === 'movements' && inventorySummary && (
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-6">
+                                    {[
+                                        {
+                                            label: 'Stock In',
+                                            count: inventorySummary.stock_in_count,
+                                            quantity: inventorySummary.stock_in_quantity,
+                                        },
+                                        {
+                                            label: 'Sale',
+                                            count: inventorySummary.sale_count,
+                                            quantity: inventorySummary.sale_quantity,
+                                        },
+                                        {
+                                            label: 'Sale Reversal',
+                                            count: inventorySummary.sale_reversal_count,
+                                            quantity: inventorySummary.sale_reversal_quantity,
+                                        },
+                                        {
+                                            label: 'Adjustment',
+                                            count: inventorySummary.adjustment_count,
+                                            quantity: inventorySummary.adjustment_quantity,
+                                        },
+                                        {
+                                            label: 'Transfer In',
+                                            count: inventorySummary.transfer_in_count,
+                                            quantity: inventorySummary.transfer_in_quantity,
+                                        },
+                                        {
+                                            label: 'Transfer Out',
+                                            count: inventorySummary.transfer_out_count,
+                                            quantity: inventorySummary.transfer_out_quantity,
+                                        },
+                                    ].map((item) => (
+                                        <div
+                                            key={item.label}
+                                            className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                                        >
+                                            <h3 className="text-sm font-medium text-gray-500">
+                                                {item.label}
+                                            </h3>
+
+                                            <p className="mt-2 text-2xl font-semibold text-gray-900">
+                                                {Number(item.count ?? 0).toLocaleString()}
+                                                <span className="ml-2 text-sm font-normal text-gray-500">
+                                                    transactions
+                                                </span>
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-gray-600">
+                                                Quantity:{' '}
+                                                {Number(item.quantity ?? 0).toLocaleString(undefined, {
+                                                    maximumFractionDigits: 3,
+                                                })}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
                                             <div className="overflow-x-auto">
                                                 <table className="min-w-full divide-y divide-gray-200">
                                                     <thead className="bg-gray-50">
