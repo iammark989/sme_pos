@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 
 export default function ReportsIndex() {
     const today = new Date().toISOString().split('T')[0];
-
+    const [activeTab, setActiveTab] = useState('range');
     const [branches, setBranches] = useState([]);
     const [branchId, setBranchId] = useState('');
 
@@ -11,6 +11,10 @@ export default function ReportsIndex() {
     const [dateTo, setDateTo] = useState(today);
 
     const [report, setReport] = useState(null);
+    const [productDate, setProductDate] = useState(today);
+    const [productReport, setProductReport] = useState(null);
+    const [loadingProducts, setLoadingProducts] = useState(false);
+    const [productError, setProductError] = useState('');
 
     const [loadingBranches, setLoadingBranches] = useState(true);
     const [loadingReport, setLoadingReport] = useState(false);
@@ -104,12 +108,65 @@ export default function ReportsIndex() {
         }
     };
 
+    const loadProductReport = async () => {
+        try {
+            setLoadingProducts(true);
+            setProductError('');
+
+            if (!productDate) {
+                throw new Error('Please select a date for the product sales report.');
+            }
+
+            const params = new URLSearchParams({ date: productDate });
+
+            if (branchId) {
+                params.append('branch_id', branchId);
+            }
+
+            const response = await fetch(
+                `/api/reports/sales/daily/products?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load daily product sales report.'
+                );
+            }
+
+            setProductReport(result.data);
+        } catch (err) {
+            setProductError(
+                err.message || 'Failed to load daily product sales report.'
+            );
+            setProductReport(null);
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
+
     const handleReset = () => {
+
         setDateFrom(today);
+
         setDateTo(today);
+
         setBranchId('');
+        setProductDate(today);
+        setProductReport(null);
+        setProductError('');
+
         setReport(null);
+
         setError('');
+
     };
 
     const formatCurrency = (value) => {
@@ -168,6 +225,45 @@ export default function ReportsIndex() {
                         </div>
                     </div>
 
+                    {/* Report Tabs */}
+                    <div className="mb-6 rounded-xl bg-white p-2 shadow-sm">
+                        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Sales reports">
+                            <button
+                                type="button"
+                                role="tab"
+                                id="sales-range-tab"
+                                aria-selected={activeTab === 'range'}
+                                aria-controls="sales-range-panel"
+                                onClick={() => setActiveTab('range')}
+                                className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                                    activeTab === 'range'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer'
+                                }`}
+                            >
+                                Sales by Date Range
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                id="daily-products-tab"
+                                aria-selected={activeTab === 'products'}
+                                aria-controls="daily-products-panel"
+                                onClick={() => setActiveTab('products')}
+                                className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                                    activeTab === 'products'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 cursor-pointer'
+                                }`}
+                            >
+                                Daily Product Sales
+                            </button>
+                        </div>
+                    </div>
+
+                    {activeTab === 'range' && (
+                        <div id="sales-range-panel" role="tabpanel" aria-labelledby="sales-range-tab">
+                            <>
                     {/* Report Filters */}
                     <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
                         <div className="mb-5">
@@ -235,9 +331,11 @@ export default function ReportsIndex() {
                                 <select
                                     id="branch_id"
                                     value={branchId}
-                                    onChange={(event) =>
-                                        setBranchId(event.target.value)
-                                    }
+                                    onChange={(event) => {
+                                        setBranchId(event.target.value);
+                                        setProductReport(null);
+                                        setProductError('');
+                                    }}
                                     disabled={loadingBranches}
                                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
                                 >
@@ -388,16 +486,19 @@ export default function ReportsIndex() {
                                     <h2 className="text-lg font-semibold text-gray-900">
                                         Voided Transactions
                                     </h2>
+
                                     <p className="mt-1 text-sm text-gray-500">
                                         Transactions voided during the selected reporting period.
                                     </p>
                                 </div>
 
                                 <div className="grid gap-4 sm:grid-cols-2">
+
                                     <SummaryCard
                                         title="Voided Transactions"
                                         value={Number(report.summary?.voided_transaction_count ?? 0).toLocaleString('en-PH')}
                                     />
+
                                     <SummaryCard
                                         title="Voided Sales Value"
                                         value={formatCurrency(report.summary?.voided_sales)}
@@ -405,12 +506,15 @@ export default function ReportsIndex() {
                                 </div>
                             </div>
 
+
+
                             {/* Daily Sales Breakdown */}
                             <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
                                 <div className="mb-5">
                                     <h2 className="text-lg font-semibold text-gray-900">
                                         Daily Sales Breakdown
                                     </h2>
+
                                     <p className="mt-1 text-sm text-gray-500">
                                         Sales totals for each day in the selected reporting period.
                                     </p>
@@ -428,6 +532,7 @@ export default function ReportsIndex() {
                                                     <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Net Sales</th>
                                                 </tr>
                                             </thead>
+
                                             <tbody className="divide-y divide-gray-200 bg-white">
                                                 {report.daily_sales.map((day) => (
                                                     <tr key={day.date}>
@@ -450,8 +555,179 @@ export default function ReportsIndex() {
                         </>
                     )}
 
+                            </>
+                        </div>
+                    )}
+
+                    {activeTab === 'products' && (
+                        <div id="daily-products-panel" role="tabpanel" aria-labelledby="daily-products-tab">
+                    <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                        <div className="mb-5">
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Daily Product Sales Report
+                            </h2>
+                            <p className="mt-1 text-sm text-gray-500">
+                                See the products sold, quantities, and gross sales for a selected date and branch.
+                            </p>
+                        </div>
+
+                        <div className="mb-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <div>
+                                <label
+                                    htmlFor="product_report_date"
+                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Sales Date
+                                </label>
+                                <input
+                                    id="product_report_date"
+                                    type="date"
+                                    value={productDate}
+                                    onChange={(event) => {
+                                        setProductDate(event.target.value);
+                                        setProductReport(null);
+                                        setProductError('');
+                                    }}
+                                    max={today}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="flex items-end">
+                                <button
+                                    type="button"
+                                    onClick={loadProductReport}
+                                    disabled={loadingProducts || !productDate || loadingBranches}
+                                    className="cursor-pointer w-full rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {loadingProducts ? 'Loading...' : 'Generate Product Report'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {productError && (
+                            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                {productError}
+                            </div>
+                        )}
+
+                        {productReport && (
+                            <>
+                                <div className="mb-4 flex flex-col gap-2 rounded-lg bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            Sales Date
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                                            {productReport.date}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            Branch
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold text-gray-900">
+                                            {getBranchName()}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="mb-4 grid gap-4 sm:grid-cols-2">
+                                    <SummaryCard
+                                        title="Products Sold"
+                                        value={Number(productReport.products?.length ?? 0).toLocaleString('en-PH')}
+                                    />
+                                    <SummaryCard
+                                        title="Total Product Gross Sales"
+                                        value={formatCurrency(
+                                            (productReport.products ?? []).reduce(
+                                                (total, product) => total + Number(product.gross_sales ?? 0),
+                                                0
+                                            )
+                                        )}
+                                    />
+                                </div>
+
+                                {Array.isArray(productReport.products) && productReport.products.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                        SKU
+                                                    </th>
+                                                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                        Product Name
+                                                    </th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                        Quantity Sold
+                                                    </th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                        Gross Sales
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 bg-white">
+                                                {productReport.products.map((product) => (
+                                                    <tr key={product.product_id}>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                            {product.sku || '—'}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                            {product.product_name}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
+                                                            {Number(product.quantity_sold ?? 0).toLocaleString('en-PH')}
+                                                        </td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                                                            {formatCurrency(product.gross_sales)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                            <tfoot className="bg-gray-50">
+                                                <tr>
+                                                    <td colSpan={2} className="px-4 py-3 text-sm font-semibold text-gray-900">
+                                                        Total
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                                                        {productReport.products.reduce(
+                                                            (total, product) => total + Number(product.quantity_sold ?? 0),
+                                                            0
+                                                        ).toLocaleString('en-PH')}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-bold text-gray-900">
+                                                        {formatCurrency(
+                                                            productReport.products.reduce(
+                                                                (total, product) => total + Number(product.gross_sales ?? 0),
+                                                                0
+                                                            )
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                        No completed product sales found for the selected date and branch.
+                                    </p>
+                                )}
+                            </>
+                        )}
+
+                        {!productReport && !loadingProducts && !productError && (
+                            <p className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                Select a sales date and generate the product report.
+                            </p>
+                        )}
+                    </div>
+
+                        </div>
+                    )}
+
                     {/* Empty State */}
-                    {!report && !loadingReport && !error && (
+                    {activeTab === 'range' && !report && !loadingReport && !error && (
                         <div className="rounded-xl bg-white px-6 py-12 text-center shadow-sm">
                             <h2 className="text-lg font-semibold text-gray-900">
                                 No Report Generated
