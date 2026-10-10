@@ -618,7 +618,267 @@ export default function ReportsIndex() {
         }
     };
 
+    const exportSalesRangeExcel = async () => {
+        if (!report || !dateFrom || !dateTo) {
+            return;
+        }
 
+        if (dateFrom > dateTo) {
+            setError('The start date cannot be later than the end date.');
+            return;
+        }
+
+        try {
+            setLoadingReport(true);
+            setError('');
+
+            const params = new URLSearchParams({
+                date_from: dateFrom,
+                date_to: dateTo,
+            });
+
+            if (branchId) {
+                params.append('branch_id', branchId);
+            }
+
+            const response = await fetch(
+                `/api/reports/sales/export?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                let message = 'Failed to export sales report to Excel.';
+
+                try {
+                    const result = await response.json();
+                    message = result.message || message;
+                } catch {
+                    // Keep the fallback message for non-JSON errors.
+                }
+
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.download = `sales-report-${dateFrom}-to-${dateTo}.xlsx`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setError(err.message || 'Failed to export sales report to Excel.');
+        } finally {
+            setLoadingReport(false);
+        }
+    };
+
+    const exportProductSalesExcel = async () => {
+        if (!productReport || !productDate) {
+            return;
+        }
+
+        try {
+            setLoadingProducts(true);
+            setProductError('');
+
+            const params = new URLSearchParams({
+                date: productDate,
+            });
+
+            if (branchId) {
+                params.append('branch_id', branchId);
+            }
+
+            const response = await fetch(
+                `/api/reports/sales/daily/products/export?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                let message = 'Failed to export daily product sales to Excel.';
+
+                try {
+                    const result = await response.json();
+                    message = result.message || message;
+                } catch {
+                    // Keep the fallback message for non-JSON errors.
+                }
+
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.download = `daily-product-sales-${productDate}.xlsx`;
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setProductError(
+                err.message || 'Failed to export daily product sales to Excel.'
+            );
+        } finally {
+            setLoadingProducts(false);
+        }
+    };
+
+    const exportInventoryStocksExcel = async () => {
+        if (inventoryView === 'movement') {
+            return;
+        }
+
+        try {
+            setLoadingInventory(true);
+            setInventoryError('');
+
+            const params = new URLSearchParams();
+
+            if (inventorySearch.trim()) {
+                params.append('search', inventorySearch.trim());
+            }
+
+            if (inventoryWarehouseId.trim()) {
+                params.append('warehouse_id', inventoryWarehouseId.trim());
+            }
+
+            if (inventoryView === 'low-stock') {
+                params.append('low_stock', '1');
+            }
+
+            const response = await fetch(
+                `/api/inventory/stocks/export?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                let message = 'Failed to export inventory report to Excel.';
+
+                try {
+                    const result = await response.json();
+                    message = result.message || message;
+                } catch {
+                    // Keep the fallback message for non-JSON errors.
+                }
+
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.download = inventoryView === 'low-stock'
+                ? 'inventory-low-stock.xlsx'
+                : 'inventory-stock-on-hand.xlsx';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setInventoryError(
+                err.message || 'Failed to export inventory report to Excel.'
+            );
+        } finally {
+            setLoadingInventory(false);
+        }
+    };
+
+    const exportInventoryMovementExcel = async () => {
+        if (inventoryView !== 'movement') {
+            return;
+        }
+
+        try {
+            setLoadingInventory(true);
+            setInventoryError('');
+
+            const params = new URLSearchParams();
+
+            if (inventorySearch.trim()) {
+                params.append('search', inventorySearch.trim());
+            }
+
+            if (inventoryWarehouseId.trim()) {
+                params.append('warehouse_id', inventoryWarehouseId.trim());
+            }
+
+            if (inventoryDateFrom) {
+                params.append('date_from', inventoryDateFrom);
+            }
+
+            if (inventoryDateTo) {
+                params.append('date_to', inventoryDateTo);
+            }
+
+            const response = await fetch(
+                `/api/inventory/transactions/export?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json',
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                let message = 'Failed to export inventory movement to Excel.';
+
+                try {
+                    const result = await response.json();
+                    message = result.message || message;
+                } catch {
+                    // Keep the fallback message for non-JSON errors.
+                }
+
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+
+            link.href = url;
+            link.download = 'inventory-movement.xlsx';
+
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setInventoryError(
+                err.message || 'Failed to export inventory movement to Excel.'
+            );
+        } finally {
+            setLoadingInventory(false);
+        }
+    };
 
     return (
         <AuthenticatedLayout>
@@ -1010,14 +1270,25 @@ export default function ReportsIndex() {
                                         </div>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={exportSalesRangeCsv}
-                                        disabled={!report}
-                                        className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        Export CSV
-                                    </button>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={exportSalesRangeCsv}
+                                            disabled={!report || loadingReport}
+                                            className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Export CSV
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={exportSalesRangeExcel}
+                                            disabled={!report || loadingReport}
+                                            className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {loadingReport ? 'Exporting...' : 'Export Excel'}
+                                        </button>
+                                    </div>
                                 </div>
 
                             </div>
@@ -1140,12 +1411,6 @@ export default function ReportsIndex() {
                                 </div>
 
                             </div>
-
-
-
-
-
-
 
                             {/* Daily Sales Breakdown */}
 
@@ -1376,13 +1641,25 @@ export default function ReportsIndex() {
                                         </div>
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={exportProductSalesCsv}
-                                        className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
-                                    >
-                                        Export CSV
-                                    </button>
+                                    <div className="flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={exportProductSalesCsv}
+                                            disabled={!productReport || loadingProducts}
+                                            className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Export CSV
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={exportProductSalesExcel}
+                                            disabled={!productReport || loadingProducts}
+                                            className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {loadingProducts ? 'Exporting...' : 'Export Excel'}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="mb-4 grid gap-4 sm:grid-cols-2">
@@ -1640,6 +1917,24 @@ export default function ReportsIndex() {
                                         className="cursor-pointer rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Export CSV
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={exportInventoryStocksExcel}
+                                        hidden={loadingInventory || inventoryView === 'movement'}
+                                        className="cursor-pointer rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {loadingInventory ? 'Exporting...' : 'Export Excel'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={exportInventoryMovementExcel}
+                                        hidden={loadingInventory || inventoryView !== 'movement'}
+                                        className="cursor-pointer rounded-lg bg-emerald-700 px-4 py-2 font-medium text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {loadingInventory ? 'Exporting...' : 'Export Excel'}
                                     </button>
                                 </div>
 

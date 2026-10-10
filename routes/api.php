@@ -63,6 +63,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/inventory/transactions', [InventoryTransactionQueryController::class, 'index',]);
 
+    Route::get('/inventory/stocks/export', [InventoryQueryController::class, 'export',]);
+
     Route::post('/purchase-orders', [PurchaseOrderController::class, 'store']);
 
     Route::get('/purchase-orders', [PurchaseOrderQueryController::class, 'index',]);
@@ -105,6 +107,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/reports/sales', [SalesReportController::class, 'range',]);
 
+    Route::get('/reports/sales/export', [SalesReportController::class, 'exportRange',]);
+
+    Route::get('/reports/sales/daily/products/export', [SalesReportController::class, 'exportDailyProducts',]);
+
     Route::get('/branches', [BranchQueryController::class, 'index']);
 
     Route::get('/pos/transactions', [PosTransactionController::class, 'index',]);
@@ -112,6 +118,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/pos/transactions/{sale}', [PosTransactionController::class, 'show',])->whereNumber('sale');
 
     Route::get('/transactions', [TransactionHistoryController::class, 'index',]);
+
+    Route::get('/inventory/transactions/export', [InventoryTransactionQueryController::class, 'export',]);
 
     Route::get('/transactions/{sale}', [TransactionHistoryController::class, 'show',])->whereNumber('sale');
 

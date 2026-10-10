@@ -2,10 +2,15 @@
 
 namespace App\Http\Controllers\Reports;
 
+use App\Exports\SalesRangeExport;
+use App\Exports\DailyProductSalesExport;
 use App\Http\Controllers\Controller;
 use App\Services\Reports\SalesReportService;
+
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class SalesReportController extends Controller
 {
@@ -134,4 +139,84 @@ class SalesReportController extends Controller
             'data' => $report,
         ]);
     }
+
+    public function exportRange(Request $request)
+    {
+        $user = $request->user();
+
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not allowed to access sales reports.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'date_from' => ['required', 'date_format:Y-m-d'],
+            'date_to' => [
+                'required',
+                'date_format:Y-m-d',
+                'after_or_equal:date_from',
+            ],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+
+        $branchId = $this->resolveBranchId(
+            $request,
+            $validated['branch_id'] ?? null
+        );
+
+        $report = $this->salesReportService->range(
+            $validated['date_from'],
+            $validated['date_to'],
+            $branchId
+        );
+
+        $filename = sprintf(
+            'sales-report-%s-to-%s.xlsx',
+            $validated['date_from'],
+            $validated['date_to']
+        );
+
+        return Excel::download(
+            new SalesRangeExport($report['daily_sales']),
+            $filename
+        );
+    }
+    public function exportDailyProducts(Request $request)
+    {
+        $user = $request->user();
+
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not allowed to access sales reports.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+
+        $branchId = $this->resolveBranchId(
+            $request,
+            $validated['branch_id'] ?? null
+        );
+
+        $report = $this->salesReportService->dailyProducts(
+            $validated['date'],
+            $branchId
+        );
+
+        $filename = sprintf(
+            'daily-product-sales-%s.xlsx',
+            $validated['date']
+        );
+
+        return Excel::download(
+            new DailyProductSalesExport($report['products']),
+            $filename
+        );
+    }
+
+
 }
