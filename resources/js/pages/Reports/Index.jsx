@@ -494,6 +494,131 @@ export default function ReportsIndex() {
         }
     };
 
+    
+    const exportInventoryMovementCsv = async () => {
+        try {
+            if (
+                inventoryDateFrom &&
+                inventoryDateTo &&
+                inventoryDateFrom > inventoryDateTo
+            ) {
+                setInventoryError(
+                    'The start date cannot be later than the end date.'
+                );
+                return;
+            }
+
+            setLoadingInventory(true);
+            setInventoryError('');
+
+            const allRows = [];
+            let page = 1;
+            let lastPage = 1;
+
+            do {
+                const params = new URLSearchParams({
+                    page: String(page),
+                    per_page: '100',
+                });
+
+                if (inventorySearch.trim()) {
+                    params.append('search', inventorySearch.trim());
+                }
+
+                if (inventoryWarehouseId.trim()) {
+                    params.append('warehouse_id', inventoryWarehouseId.trim());
+                }
+
+                if (inventoryDateFrom) {
+                    params.append('date_from', inventoryDateFrom);
+                }
+
+                if (inventoryDateTo) {
+                    params.append('date_to', inventoryDateTo);
+                }
+
+                const response = await fetch(
+                    `/api/inventory/transactions?${params.toString()}`,
+                    {
+                        headers: { Accept: 'application/json' },
+                    }
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || 'Failed to export inventory movement.'
+                    );
+                }
+
+                const paginator = result.data;
+                const pageRows = Array.isArray(paginator?.data)
+                    ? paginator.data
+                    : [];
+
+                allRows.push(...pageRows);
+                lastPage = Number(paginator?.last_page ?? 1);
+                page += 1;
+            } while (page <= lastPage);
+
+            const rows = allRows.map((row) => {
+                const item = row.inventory_item ?? row.inventoryItem ?? {};
+                const warehouse = row.warehouse ?? {};
+
+                const reference = [
+                    row.transfer_reference,
+                    row.reference_type && row.reference_id
+                        ? `${row.reference_type} #${row.reference_id}`
+                        : null,
+                    row.notes,
+                ]
+                    .filter(Boolean)
+                    .join(' · ');
+
+                return [
+                    row.created_at
+                        ? new Date(row.created_at).toLocaleString('en-PH')
+                        : '',
+                    item.sku ?? '',
+                    item.name ?? '',
+                    row.transaction_category ?? 'Other',
+                    row.type ?? '',
+                    Number(row.quantity ?? 0),
+                    warehouse.name ?? '',
+                    row.related_warehouse?.name ?? '',
+                    reference,
+                ];
+            });
+
+            const from = inventoryDateFrom || 'all-dates';
+            const to = inventoryDateTo || 'all-dates';
+
+            downloadCsv(
+                `inventory-movement-${from}-to-${to}.csv`,
+                [
+                    'Date',
+                    'SKU',
+                    'Item',
+                    'Category',
+                    'Type',
+                    'Quantity',
+                    'Warehouse',
+                    'Related Warehouse',
+                    'Reference / Notes',
+                ],
+                rows
+            );
+        } catch (err) {
+            setInventoryError(
+                err.message || 'Failed to export inventory movement.'
+            );
+        } finally {
+            setLoadingInventory(false);
+        }
+    };
+
+
 
     return (
         <AuthenticatedLayout>
@@ -1504,11 +1629,14 @@ export default function ReportsIndex() {
 
                                     <button
                                         type="button"
-                                        onClick={exportInventoryStocksCsv}
-                                        disabled={
-                                            loadingInventory ||
-                                            inventoryView === 'movement'
-                                        }
+                                        onClick={() => {
+                                            if (inventoryView === 'movement') {
+                                                exportInventoryMovementCsv();
+                                            } else {
+                                                exportInventoryStocksCsv();
+                                            }
+                                        }}
+                                        disabled={loadingInventory}
                                         className="cursor-pointer rounded-lg bg-green-600 px-4 py-2 font-medium text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Export CSV
