@@ -135,6 +135,33 @@ class SalesReportService
             ->orderBy('date')
             ->get();
 
+        /*
+        * Voided transactions are reported by the date they were voided,
+        * not the date the original sale was created.
+        */
+        $voidQuery = Sale::query()
+            ->where('status', 'voided')
+            ->whereNotNull('voided_at')
+            ->whereDate('voided_at', '>=', $dateFrom)
+            ->whereDate('voided_at', '<=', $dateTo)
+            ->when($branchId !== null, function ($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            });
+
+        $voidedTransactionCount = (clone $voidQuery)->count();
+
+        $voidedSales = (clone $voidQuery)->sum('total_amount');
+
+        $dailyVoids = (clone $voidQuery)
+            ->selectRaw('
+                DATE(voided_at) as date,
+                COUNT(*) as transaction_count,
+                SUM(total_amount) as voided_sales
+            ')
+            ->groupByRaw('DATE(voided_at)')
+            ->orderBy('date')
+            ->get();
+
         return [
             'date_from' => \Illuminate\Support\Carbon::parse($dateFrom)->toDateString(),
             'date_to' => \Illuminate\Support\Carbon::parse($dateTo)->toDateString(),
@@ -147,6 +174,8 @@ class SalesReportService
                 'net_sales' => round((float) $netSales, 2),
                 'cash_sales' => round((float) $cashSales, 2),
                 'gcash_sales' => round((float) $gcashSales, 2),
+                'voided_transaction_count' => $voidedTransactionCount,
+                'voided_sales' => round((float) $voidedSales, 2),
             ],
 
             'daily_sales' => $dailySales->map(function ($row) {
@@ -156,6 +185,14 @@ class SalesReportService
                     'gross_sales' => round((float) $row->gross_sales, 2),
                     'discounts' => round((float) $row->discounts, 2),
                     'net_sales' => round((float) $row->net_sales, 2),
+                ];
+            })->values()->all(),
+
+            'daily_voids' => $dailyVoids->map(function ($row) {
+                return [
+                    'date' => $row->date,
+                    'transaction_count' => (int) $row->transaction_count,
+                    'voided_sales' => round((float) $row->voided_sales, 2),
                 ];
             })->values()->all(),
         ];

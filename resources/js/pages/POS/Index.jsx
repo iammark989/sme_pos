@@ -532,6 +532,27 @@ export default function POS() {
                         <p className="font-medium text-red-700">
                             {error}
                         </p>
+
+                        <div className="mt-4 flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setError(null);
+                                    setShowPayment(false);
+                                }}
+                                className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                            >
+                                Back to Cart
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => window.location.reload()}
+                                className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            >
+                                Reload POS
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -2071,11 +2092,7 @@ export default function POS() {
                                 </div>
                     </>
                 ) : null}
-
-                
-                
-                
-                                
+             
             </div>
         </AuthenticatedLayout>
     );

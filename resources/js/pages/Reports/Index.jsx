@@ -381,6 +381,72 @@ export default function ReportsIndex() {
                                     />
                                 </div>
                             </div>
+
+                             {/* Voided Transactions Summary */}
+                            <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                                <div className="mb-5">
+                                    <h2 className="text-lg font-semibold text-gray-900">
+                                        Voided Transactions
+                                    </h2>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Transactions voided during the selected reporting period.
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <SummaryCard
+                                        title="Voided Transactions"
+                                        value={Number(report.summary?.voided_transaction_count ?? 0).toLocaleString('en-PH')}
+                                    />
+                                    <SummaryCard
+                                        title="Voided Sales Value"
+                                        value={formatCurrency(report.summary?.voided_sales)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Daily Sales Breakdown */}
+                            <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                                <div className="mb-5">
+                                    <h2 className="text-lg font-semibold text-gray-900">
+                                        Daily Sales Breakdown
+                                    </h2>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Sales totals for each day in the selected reporting period.
+                                    </p>
+                                </div>
+
+                                {Array.isArray(report.daily_sales) && report.daily_sales.length > 0 ? (
+                                    <div className="overflow-x-auto">
+                                        <table className="min-w-full divide-y divide-gray-200">
+                                            <thead className="bg-gray-50">
+                                                <tr>
+                                                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Date</th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Transactions</th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Gross Sales</th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Discounts</th>
+                                                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Net Sales</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-200 bg-white">
+                                                {report.daily_sales.map((day) => (
+                                                    <tr key={day.date}>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{day.date}</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{Number(day.transaction_count ?? 0).toLocaleString('en-PH')}</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(day.gross_sales)}</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(day.discounts)}</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCurrency(day.net_sales)}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                        No daily sales found for the selected reporting period.
+                                    </p>
+                                )}
+                            </div>
                         </>
                     )}
 
