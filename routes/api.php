@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BranchQueryController;
+use App\Http\Controllers\CategoryQueryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GoodsReceiptController;
 use App\Http\Controllers\InventoryAdjustmentController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\InventoryTransactionQueryController;
 use App\Http\Controllers\InventoryTransferController;
 use App\Http\Controllers\PosProductController;
 use App\Http\Controllers\PosTransactionController;
+use App\Http\Controllers\ProductManagementController;
 use App\Http\Controllers\ProductQueryController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\PurchaseOrderQueryController;
@@ -136,5 +138,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/users/{managedUser}', [UserManagementController::class, 'destroy'])->whereNumber('managedUser');
 
     Route::get('/dashboard', [DashboardController::class, 'index']);
+
+    Route::get('/product-categories', [CategoryQueryController::class, 'index',]);
+
+    Route::get('/product-management', [ProductManagementController::class, 'index',]);
+
+    Route::post('/product-management', [ProductManagementController::class, 'store',]);
+
+    Route::get('/product-management/{product}', [ProductManagementController::class, 'show',])->whereNumber('product');
+
+    Route::put('/product-management/{product}', [ProductManagementController::class, 'update',])->whereNumber('product');
 
 });
