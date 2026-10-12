@@ -24,6 +24,7 @@ use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ShiftQueryController;
 use App\Http\Controllers\SupplierQueryController;
 use App\Http\Controllers\TransactionHistoryController;
+use App\Http\Controllers\UomController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VoidTransactionController;
 use App\Http\Controllers\WarehouseQueryController;
@@ -89,6 +90,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/inventory-items/{inventoryItem}/status', [InventoryItemQueryController::class, 'updateStatus'])->whereNumber('inventoryItem');
 
+    Route::post('/inventory-items', [InventoryItemQueryController::class, 'store']);
+
+    Route::put('/inventory-items/{inventoryItem}', [InventoryItemQueryController::class, 'update'])->whereNumber('inventoryItem');
+    
     Route::get('/warehouses', [WarehouseQueryController::class, 'index',]);
 
     Route::get('/warehouses/{warehouse}', [WarehouseQueryController::class, 'show',])->whereNumber('warehouse');
@@ -150,5 +155,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/product-management/{product}', [ProductManagementController::class, 'show',])->whereNumber('product');
 
     Route::put('/product-management/{product}', [ProductManagementController::class, 'update',])->whereNumber('product');
+
+    Route::get('/uoms', [UomController::class, 'index']);
+
+    Route::post('/uoms', [UomController::class, 'store']);
+
+    Route::put('/uoms/{uom}', [UomController::class, 'update'])->whereNumber('uom');
 
 });

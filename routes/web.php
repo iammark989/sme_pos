@@ -63,4 +63,18 @@ Route::middleware('auth')->group(function () {
         ]);
     })->whereNumber('product')->name('products.show');
 
+    Route::get('/inventory-items', function () {
+        return Inertia::render('InventoryItems/Index');
+    })->name('inventory-items.index');
+
+    Route::get('/inventory-items/create', function () {
+        return Inertia::render('InventoryItems/Create');
+    })->name('inventory-items.create');
+
+    Route::get('/inventory-items/{inventoryItem}/edit', function ($inventoryItem) {
+        return Inertia::render('InventoryItems/Edit', [
+            'inventoryItemId' => (int) $inventoryItem,
+        ]);
+    })->whereNumber('inventoryItem')->name('inventory-items.edit');
+
 });

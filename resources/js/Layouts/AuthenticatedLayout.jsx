@@ -46,6 +46,13 @@ export default function AuthenticatedLayout({ children }) {
                                 Inventory
                             </Link>
 
+                             <Link
+                                href="/inventory-items"
+                                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                            >
+                                Items
+                            </Link>
+
                             <Link
                                 href="/admin/products"
                                 className="text-sm font-medium text-gray-700 hover:text-blue-600"
