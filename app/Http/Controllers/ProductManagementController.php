@@ -133,7 +133,11 @@ class ProductManagementController extends Controller
                 'sometimes',
                 'required',
                 'integer',
-                Rule::exists('categories', 'id')->where('is_active', true),
+                Rule::exists('categories', 'id')
+                    ->where(function ($query) use ($product) {
+                        $query->where('is_active', true)
+                            ->orWhere('id', $product->category_id);
+                    }),
             ],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'sku' => [
@@ -151,7 +155,14 @@ class ProductManagementController extends Controller
                 'required_with:recipes',
                 'integer',
                 'distinct',
-                Rule::exists('inventory_items', 'id')->where('is_active', true),
+                Rule::exists('inventory_items', 'id')
+                    ->where(function ($query) use ($product) {
+                        $query->where('is_active', true)
+                            ->orWhereIn(
+                                'id',
+                                $product->recipes()->pluck('inventory_item_id')
+                            );
+                    }),
             ],
             'recipes.*.quantity' => [
                 'required_with:recipes',

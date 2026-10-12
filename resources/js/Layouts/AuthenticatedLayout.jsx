@@ -29,7 +29,7 @@ export default function AuthenticatedLayout({ children }) {
                             Dashboard
                         </Link>
 
-                        {['Owner', 'Admin', 'Accounting'].includes(
+                        {['Owner', 'Admin',].includes(
                             user.role?.name
                         ) && (
                             <>
@@ -54,10 +54,36 @@ export default function AuthenticatedLayout({ children }) {
                             </Link>
 
                             <Link
-                                href="/admin/products"
+                                href="/products"
                                 className="text-sm font-medium text-gray-700 hover:text-blue-600"
                             >
                                 Products
+                            </Link>
+                            </>
+                        )}
+
+                         {['Accounting'].includes(
+                            user.role?.name
+                        ) && (
+                            <>
+                            <Link
+                                href="/reports"
+                                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                            >
+                                Reports
+                            </Link>
+                            <Link
+                                href="/inventory"
+                                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                            >
+                                Inventory
+                            </Link>
+
+                             <Link
+                                href="/inventory-items"
+                                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                            >
+                                Items
                             </Link>
                             </>
                         )}
@@ -87,7 +113,7 @@ export default function AuthenticatedLayout({ children }) {
                         <button
                             type="button"
                             onClick={logout}
-                            className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="cursor-pointer rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                             Logout
                         </button>

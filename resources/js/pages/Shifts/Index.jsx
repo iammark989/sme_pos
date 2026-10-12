@@ -366,7 +366,7 @@ export default function Index() {
                             <button
                                 type="button"
                                 onClick={handleResetFilters}
-                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                             >
                                 Reset
                             </button>
@@ -374,7 +374,7 @@ export default function Index() {
                             <button
                                 type="button"
                                 onClick={handleApplyFilters}
-                                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                className="cursor-pointer rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
                             >
                                 Apply Filters
                             </button>

@@ -48,7 +48,7 @@ export default function Show({ productId }) {
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <Link
-                            href="/admin/products"
+                            href="/products"
                             className="text-sm font-medium text-blue-600 hover:text-blue-800"
                         >
                             &larr; Back to Products
@@ -88,15 +88,24 @@ export default function Show({ productId }) {
                                     Product Information
                                 </h2>
 
-                                {product.is_active ? (
-                                    <span className="inline-flex w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                                        Active
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                                        Inactive
-                                    </span>
-                                )}
+                                <div className="flex flex-wrap items-center gap-3">
+                                    {product.is_active ? (
+                                        <span className="inline-flex w-fit rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                            Active
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex w-fit rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                            Inactive
+                                        </span>
+                                    )}
+
+                                    <Link
+                                        href={`/products/${product.id}/edit`}
+                                        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                                    >
+                                        Edit Product
+                                    </Link>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 gap-6 p-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -231,7 +240,7 @@ export default function Show({ productId }) {
                         {/* Footer */}
                         <div className="flex justify-end">
                             <Link
-                                href="/admin/products"
+                                href="/products"
                                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                             >
                                 Back to Products

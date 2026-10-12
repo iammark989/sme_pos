@@ -479,7 +479,7 @@ export default function Index() {
                                                                 className={
                                                                     item.is_active
                                                                         ? 'font-medium text-red-600 hover:text-red-800 cursor-pointer'
-                                                                        : 'font-medium text-green-600 hover:text-green-800cursor-pointer'
+                                                                        : 'font-medium text-green-600 hover:text-green-800 cursor-pointer'
                                                                 }
                                                             >
                                                                 {item.is_active
@@ -561,7 +561,7 @@ export default function Index() {
                                     type="button"
                                     onClick={closeUomModal}
                                     disabled={uomSaving}
-                                    className="rounded-lg px-3 py-2 text-xl text-gray-500 hover:bg-gray-100"
+                                    className="cursor-pointer rounded-lg px-3 py-2 text-xl text-gray-500 hover:bg-gray-100"
                                     aria-label="Close modal"
                                 >
                                     &times;

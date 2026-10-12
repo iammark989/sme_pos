@@ -1275,7 +1275,7 @@ export default function ReportsIndex() {
                                             type="button"
                                             onClick={exportSalesRangeCsv}
                                             disabled={!report || loadingReport}
-                                            className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="cursor-pointer rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Export CSV
                                         </button>
@@ -1284,7 +1284,7 @@ export default function ReportsIndex() {
                                             type="button"
                                             onClick={exportSalesRangeExcel}
                                             disabled={!report || loadingReport}
-                                            className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="cursor-pointer rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {loadingReport ? 'Exporting...' : 'Export Excel'}
                                         </button>
@@ -1646,7 +1646,7 @@ export default function ReportsIndex() {
                                             type="button"
                                             onClick={exportProductSalesCsv}
                                             disabled={!productReport || loadingProducts}
-                                            className="rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="cursor-pointer rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Export CSV
                                         </button>
@@ -1655,7 +1655,7 @@ export default function ReportsIndex() {
                                             type="button"
                                             onClick={exportProductSalesExcel}
                                             disabled={!productReport || loadingProducts}
-                                            className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                            className="cursor-pointer rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {loadingProducts ? 'Exporting...' : 'Export Excel'}
                                         </button>

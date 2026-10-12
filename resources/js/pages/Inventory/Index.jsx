@@ -329,13 +329,23 @@ export default function Index() {
                         </p>
                     </div>
                     <div>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            window.location.href = '/inventory-items';
+                        }}
+                        className="cursor-pointer m-1 rounded-lg border border-blue-600 bg-white px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50"
+                    >
+                        Manage Items
+                    </button>    
                     <button
                         type="button"
                         onClick={() => {
                             setStockInError('');
                             setShowStockInModal(true);
                         }}
-                        className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                        className="cursor-pointer m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     >
                         Stock In
                     </button>
@@ -351,7 +361,7 @@ export default function Index() {
                             setTransferNotes('');
                             setShowTransferModal(true);
                         }}
-                        className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                        className="cursor-pointer m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     >
                         Transfer Stock
                     </button>
@@ -367,7 +377,7 @@ export default function Index() {
                             setAdjustmentNotes('');
                             setShowAdjustmentModal(true);
                         }}
-                        className="m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                        className="cursor-pointer m-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
                     >
                         Adjust Stock
                     </button>
@@ -446,7 +456,7 @@ export default function Index() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Search
                         </button>
@@ -454,7 +464,7 @@ export default function Index() {
                         <button
                             type="button"
                             onClick={handleReset}
-                            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                            className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                         >
                             Reset
                         </button>
@@ -680,7 +690,7 @@ export default function Index() {
                             type="button"
                             onClick={() => setShowStockInModal(false)}
                             disabled={stockInLoading}
-                            className="text-2xl leading-none text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                            className="cursor-pointer text-2xl leading-none text-gray-400 hover:text-gray-600 disabled:opacity-50"
                         >
                             &times;
                         </button>
@@ -788,7 +798,7 @@ export default function Index() {
                                 type="button"
                                 onClick={() => setShowStockInModal(false)}
                                 disabled={stockInLoading}
-                                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -796,7 +806,7 @@ export default function Index() {
                             <button
                                 type="submit"
                                 disabled={stockInLoading}
-                                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {stockInLoading ? 'Processing...' : 'Stock In'}
                             </button>
@@ -824,7 +834,7 @@ export default function Index() {
                     <button
                         type="button"
                         onClick={() => setShowTransferModal(false)}
-                        className="text-2xl text-gray-400 hover:text-gray-600"
+                        className="cursor-pointer text-2xl text-gray-400 hover:text-gray-600"
                     >
                         &times;
                     </button>
@@ -966,7 +976,7 @@ export default function Index() {
                             type="button"
                             onClick={() => setShowTransferModal(false)}
                             disabled={transferLoading}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            className="cursor-pointer rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                         >
                             Cancel
                         </button>
@@ -974,7 +984,7 @@ export default function Index() {
                         <button
                             type="submit"
                             disabled={transferLoading}
-                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {transferLoading
                                 ? 'Transferring...'
@@ -1004,7 +1014,7 @@ export default function Index() {
                     <button
                         type="button"
                         onClick={() => setShowAdjustmentModal(false)}
-                        className="text-2xl text-gray-400 hover:text-gray-600"
+                        className="cursor-pointer text-2xl text-gray-400 hover:text-gray-600"
                     >
                         &times;
                     </button>
@@ -1141,7 +1151,7 @@ export default function Index() {
                             type="button"
                             onClick={() => setShowAdjustmentModal(false)}
                             disabled={adjustmentLoading}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                            className="cursor-pointer rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                         >
                             Cancel
                         </button>
@@ -1149,7 +1159,7 @@ export default function Index() {
                         <button
                             type="submit"
                             disabled={adjustmentLoading}
-                            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             {adjustmentLoading
                                 ? 'Adjusting...'

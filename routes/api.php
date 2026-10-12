@@ -148,6 +148,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/product-categories', [CategoryQueryController::class, 'index',]);
 
+    Route::post('/product-categories', [CategoryQueryController::class, 'store']);
+
+    Route::put('/product-categories/{category}', [CategoryQueryController::class, 'update'])->whereNumber('category');
+
+    Route::patch('/product-categories/{category}/status', [CategoryQueryController::class, 'updateStatus'])->whereNumber('category');
+
     Route::get('/product-management', [ProductManagementController::class, 'index',]);
 
     Route::post('/product-management', [ProductManagementController::class, 'store',]);
