@@ -87,6 +87,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/inventory-items/{inventoryItem}', [InventoryItemQueryController::class, 'show',])->whereNumber('inventoryItem');
 
+    Route::patch('/inventory-items/{inventoryItem}/status', [InventoryItemQueryController::class, 'updateStatus'])->whereNumber('inventoryItem');
+
     Route::get('/warehouses', [WarehouseQueryController::class, 'index',]);
 
     Route::get('/warehouses/{warehouse}', [WarehouseQueryController::class, 'show',])->whereNumber('warehouse');

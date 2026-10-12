@@ -53,4 +53,14 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Inventory/Transactions');
     })->middleware(['auth']);
 
+    Route::get('/admin/products', function () {
+    return Inertia::render('Products/Index');
+    })->name('products.index');
+
+    Route::get('/admin/products/{product}', function ($product) {
+        return Inertia::render('Products/Show', [
+            'productId' => (int) $product,
+        ]);
+    })->whereNumber('product')->name('products.show');
+
 });
