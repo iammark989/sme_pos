@@ -28,6 +28,7 @@ use App\Http\Controllers\TransactionHistoryController;
 use App\Http\Controllers\UomController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VoidTransactionController;
+use App\Http\Controllers\WarehouseManagementController;
 use App\Http\Controllers\WarehouseQueryController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -179,4 +180,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::patch('/branch-management/{branch}/status', [BranchManagementController::class, 'updateStatus'])->whereNumber('branch');
 
+    Route::get('/warehouse-management', [WarehouseManagementController::class, 'index']);
+
+    Route::post('/warehouse-management', [WarehouseManagementController::class, 'store']);
+    
 });
