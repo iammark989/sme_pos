@@ -55,23 +55,23 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/products', function () {
     return Inertia::render('Products/Index');
-    })->name('products.index');
+    })->middleware('role:Owner,Admin')->name('products.index');
 
     Route::get('/products/{product}', function ($product) {
         return Inertia::render('Products/Show', [
             'productId' => (int) $product,
         ]);
-    })->whereNumber('product')->name('products.show');
+    })->middleware('role:Owner,Admin')->whereNumber('product')->name('products.show');
 
     Route::get('/products/create', function () {
         return Inertia::render('Products/Create');
-    })->name('products.create');
+    })->middleware('role:Owner,Admin')->name('products.create');
 
     Route::get('/products/{product}/edit', function ($product) {
         return Inertia::render('Products/Edit', [
             'productId' => (int) $product,
         ]);
-    })->whereNumber('product')->name('products.edit');
+    })->middleware('role:Owner,Admin')->whereNumber('product')->name('products.edit');
 
     Route::get('/inventory-items', function () {
         return Inertia::render('InventoryItems/Index');
@@ -86,5 +86,9 @@ Route::middleware('auth')->group(function () {
             'inventoryItemId' => (int) $inventoryItem,
         ]);
     })->whereNumber('inventoryItem')->middleware('role:Owner,Admin')->name('inventory-items.edit');
+
+    Route::get('/users', function () {
+        return Inertia::render('Users/Index');
+    })->middleware('role:Owner,Admin')->name('users.index');
 
 });

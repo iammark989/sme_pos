@@ -93,6 +93,16 @@ class UserManagementController extends Controller
 
         $role = Role::findOrFail($validated['role_id']);
 
+        // Global Admin access is only valid for Admin users.
+        if (
+            ($validated['is_global_admin'] ?? false)
+            && $role->name !== 'Admin'
+        ) {
+            return response()->json([
+                'message' => 'Only Admin users can have global admin access.',
+            ], 422);
+        }
+
         // Only Owner can create an Owner.
         if (
             $role->name === 'Owner'

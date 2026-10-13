@@ -59,6 +59,13 @@ export default function AuthenticatedLayout({ children }) {
                             >
                                 Products
                             </Link>
+
+                            <Link
+                                href="/users"
+                                className="text-sm font-medium text-gray-700 hover:text-blue-600"
+                            >
+                                User Management
+                            </Link>
                             </>
                         )}
 
