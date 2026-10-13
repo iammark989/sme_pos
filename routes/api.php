@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BranchManagementController;
 use App\Http\Controllers\BranchQueryController;
 use App\Http\Controllers\CategoryQueryController;
 use App\Http\Controllers\DashboardController;
@@ -167,5 +168,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/uoms', [UomController::class, 'store']);
 
     Route::put('/uoms/{uom}', [UomController::class, 'update'])->whereNumber('uom');
+
+    Route::get('/branch-management', [BranchManagementController::class, 'index']);
+
+    Route::post('/branch-management', [BranchManagementController::class, 'store']);
+
+    Route::get('/branch-management/{branch}', [BranchManagementController::class, 'show'])->whereNumber('branch');
+
+    Route::put('/branch-management/{branch}', [BranchManagementController::class, 'update'])->whereNumber('branch');
+
+    Route::patch('/branch-management/{branch}/status', [BranchManagementController::class, 'updateStatus'])->whereNumber('branch');
 
 });

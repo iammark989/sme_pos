@@ -91,4 +91,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Users/Index');
     })->middleware('role:Owner,Admin')->name('users.index');
 
+    Route::get('/branches', function () {
+        return Inertia::render('Branches/Index');
+    })->middleware('role:Owner,Admin')->name('branches.index');
+
 });
