@@ -95,4 +95,8 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Branches/Index');
     })->middleware('role:Owner,Admin')->name('branches.index');
 
+    Route::get('/warehouses', function () {
+        return Inertia::render('Warehouses/Index');
+    })->middleware('role:Owner,Admin')->name('warehouses.index');
+
 });

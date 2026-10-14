@@ -184,4 +184,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/warehouse-management', [WarehouseManagementController::class, 'store']);
     
+    Route::get('/warehouse-management/{warehouse}', [WarehouseManagementController::class, 'show'])->whereNumber('warehouse');
+
+    Route::put('/warehouse-management/{warehouse}', [WarehouseManagementController::class, 'update'])->whereNumber('warehouse');
+
+    Route::patch('/warehouse-management/{warehouse}/status', [WarehouseManagementController::class, 'updateStatus'])->whereNumber('warehouse');
+
 });
