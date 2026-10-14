@@ -118,7 +118,6 @@ class WarehouseManagementController extends Controller
                 'integer',
                 'exists:branches,id',
             ],
-            'is_active' => ['sometimes', 'boolean'],
         ]);
 
         $warehouse->update($validated);

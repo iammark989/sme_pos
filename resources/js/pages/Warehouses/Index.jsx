@@ -608,7 +608,7 @@ export default function Index() {
                                         </p>
                                     ))}
                                 </div>
-
+                                    {!isEditMode && (
                                 <div>
                                     <label className="flex items-center gap-2 text-sm text-gray-700">
                                         <input
@@ -626,6 +626,7 @@ export default function Index() {
                                         </p>
                                     ))}
                                 </div>
+                                )}
 
                                 <div className="flex justify-end gap-3 border-t pt-4">
                                     <button
