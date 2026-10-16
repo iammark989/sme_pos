@@ -314,6 +314,14 @@ export default function Index() {
         return stock.inventory_item?.uom?.abbreviation ?? '-';
     };
 
+    const getInventoryItemUom = (inventoryItemId) => {
+        const item = inventoryItems.find(
+            (item) => String(item.id) === String(inventoryItemId)
+        );
+
+        return item?.uom?.abbreviation ?? item?.uom?.name ?? '';
+    };
+
     return (
         <AuthenticatedLayout>
         <div className="p-6">
@@ -760,20 +768,34 @@ export default function Index() {
                             <div>
                                 <label className="mb-1 block text-sm font-medium text-gray-700">
                                     Quantity
+                                    {stockInInventoryItemId &&
+                                        ` (${getInventoryItemUom(stockInInventoryItemId) || 'UOM unavailable'})`}
                                 </label>
 
-                                <input
-                                    type="number"
-                                    min="0.001"
-                                    step="0.001"
-                                    value={stockInQuantity}
-                                    onChange={(event) =>
-                                        setStockInQuantity(event.target.value)
-                                    }
-                                    required
-                                    placeholder="Enter quantity"
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
+                                <div className="flex">
+                                    <input
+                                        type="number"
+                                        min="0.001"
+                                        step="0.001"
+                                        value={stockInQuantity}
+                                        onChange={(event) =>
+                                            setStockInQuantity(event.target.value)
+                                        }
+                                        required
+                                        placeholder="Enter quantity"
+                                        className="w-full rounded-l-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+
+                                    <span className="inline-flex min-w-16 items-center justify-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm font-semibold text-gray-700">
+                                        {stockInInventoryItemId
+                                            ? getInventoryItemUom(stockInInventoryItemId) || 'N/A'
+                                            : '—'}
+                                    </span>
+                                </div>
+
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Enter the quantity in the item's unit of measurement.
+                                </p>
                             </div>
 
                             <div>
@@ -938,19 +960,34 @@ export default function Index() {
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">
                             Quantity
+                            {transferInventoryItemId &&
+                                ` (${getInventoryItemUom(transferInventoryItemId) || 'UOM unavailable'})`}
                         </label>
 
-                        <input
-                            type="number"
-                            min="0.001"
-                            step="0.001"
-                            value={transferQuantity}
-                            onChange={(e) =>
-                                setTransferQuantity(e.target.value)
-                            }
-                            placeholder="Enter quantity"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                        <div className="flex">
+                            <input
+                                type="number"
+                                min="0.001"
+                                step="0.001"
+                                value={transferQuantity}
+                                onChange={(e) =>
+                                    setTransferQuantity(e.target.value)
+                                }
+                                required
+                                placeholder="Enter quantity"
+                                className="w-full rounded-l-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+
+                            <span className="inline-flex min-w-16 items-center justify-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm font-semibold text-gray-700">
+                                {transferInventoryItemId
+                                    ? getInventoryItemUom(transferInventoryItemId) || 'N/A'
+                                    : '—'}
+                            </span>
+                        </div>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                            Enter the quantity in the item's unit of measurement.
+                        </p>
                     </div>
 
                     {/* Notes */}
@@ -1113,19 +1150,34 @@ export default function Index() {
                     <div>
                         <label className="mb-1 block text-sm font-medium text-gray-700">
                             Quantity
+                            {adjustmentInventoryItemId &&
+                                ` (${getInventoryItemUom(adjustmentInventoryItemId) || 'UOM unavailable'})`}
                         </label>
 
-                        <input
-                            type="number"
-                            min="0.001"
-                            step="0.001"
-                            value={adjustmentQuantity}
-                            onChange={(e) =>
-                                setAdjustmentQuantity(e.target.value)
-                            }
-                            placeholder="Enter quantity"
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                        <div className="flex">
+                            <input
+                                type="number"
+                                min="0.001"
+                                step="0.001"
+                                value={adjustmentQuantity}
+                                onChange={(e) =>
+                                    setAdjustmentQuantity(e.target.value)
+                                }
+                                required
+                                placeholder="Enter quantity"
+                                className="w-full rounded-l-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+
+                            <span className="inline-flex min-w-16 items-center justify-center rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 px-3 text-sm font-semibold text-gray-700">
+                                {adjustmentInventoryItemId
+                                    ? getInventoryItemUom(adjustmentInventoryItemId) || 'N/A'
+                                    : '—'}
+                            </span>
+                        </div>
+
+                        <p className="mt-1 text-xs text-gray-500">
+                            Enter the quantity in the item's unit of measurement.
+                        </p>
                     </div>
 
                     {/* Notes */}

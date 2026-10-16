@@ -10,10 +10,18 @@ class BranchSeeder extends Seeder
     public function run(): void
     {
         Branch::create([
-            'name' => 'Main Branch',
+            'name' => 'Pampanga Branch',
             'code' => 'BR-001',
-            'address' => null,
-            'contact_number' => null,
+            'address' => 'Pampanga',
+            'contact_number' => '0123456789',
+            'is_active' => true,
+        ]);
+
+        Branch::create([
+            'name' => 'Manila Branch',
+            'code' => 'BR-002',
+            'address' => 'Manila',
+            'contact_number' => '0123456789',
             'is_active' => true,
         ]);
     }

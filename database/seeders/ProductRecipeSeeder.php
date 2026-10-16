@@ -11,55 +11,119 @@ class ProductRecipeSeeder extends Seeder
 {
     public function run(): void
     {
-        $smallFries = Product::where('sku', 'FRIES-S-BBQ')->firstOrFail();
-        $largeFries = Product::where('sku', 'FRIES-L-BBQ')->firstOrFail();
-
-        $potatoFries = InventoryItem::where('sku', 'INV-POTATO-FRIES')->firstOrFail();
-        $bbqPowder = InventoryItem::where('sku', 'INV-BBQ-POWDER')->firstOrFail();
-        $smallCup = InventoryItem::where('sku', 'INV-CUP-SMALL')->firstOrFail();
-        $largeCup = InventoryItem::where('sku', 'INV-CUP-LARGE')->firstOrFail();
-
         $recipes = [
             // Small Fries BBQ
             [
-                'product_id' => $smallFries->id,
-                'inventory_item_id' => $potatoFries->id,
+                'product' => 'FRIES-S-BBQ',
+                'inventory' => 'INV-POTATO-FRIES',
                 'quantity' => 300,
             ],
             [
-                'product_id' => $smallFries->id,
-                'inventory_item_id' => $smallCup->id,
+                'product' => 'FRIES-S-BBQ',
+                'inventory' => 'INV-CUP-SMALL',
                 'quantity' => 1,
             ],
             [
-                'product_id' => $smallFries->id,
-                'inventory_item_id' => $bbqPowder->id,
+                'product' => 'FRIES-S-BBQ',
+                'inventory' => 'INV-BBQ-POWDER',
                 'quantity' => 60,
             ],
 
             // Large Fries BBQ
             [
-                'product_id' => $largeFries->id,
-                'inventory_item_id' => $potatoFries->id,
+                'product' => 'FRIES-L-BBQ',
+                'inventory' => 'INV-POTATO-FRIES',
                 'quantity' => 500,
             ],
             [
-                'product_id' => $largeFries->id,
-                'inventory_item_id' => $largeCup->id,
+                'product' => 'FRIES-L-BBQ',
+                'inventory' => 'INV-CUP-LARGE',
                 'quantity' => 1,
             ],
             [
-                'product_id' => $largeFries->id,
-                'inventory_item_id' => $bbqPowder->id,
+                'product' => 'FRIES-L-BBQ',
+                'inventory' => 'INV-BBQ-POWDER',
                 'quantity' => 100,
+            ],
+
+            // Small Fries Cheese
+            [
+                'product' => 'FRIES-S-CHEESE',
+                'inventory' => 'INV-POTATO-FRIES',
+                'quantity' => 300,
+            ],
+            [
+                'product' => 'FRIES-S-CHEESE',
+                'inventory' => 'INV-CUP-SMALL',
+                'quantity' => 1,
+            ],
+            [
+                'product' => 'FRIES-S-CHEESE',
+                'inventory' => 'INV-CHEESE-POWDER',
+                'quantity' => 60,
+            ],
+
+            // Large Fries Cheese
+            [
+                'product' => 'FRIES-L-CHEESE',
+                'inventory' => 'INV-POTATO-FRIES',
+                'quantity' => 500,
+            ],
+            [
+                'product' => 'FRIES-L-CHEESE',
+                'inventory' => 'INV-CUP-LARGE',
+                'quantity' => 1,
+            ],
+            [
+                'product' => 'FRIES-L-CHEESE',
+                'inventory' => 'INV-CHEESE-POWDER',
+                'quantity' => 100,
+            ],
+
+            // Bottled Water
+            [
+                'product' => 'DRINK-WATER',
+                'inventory' => 'INV-BOTTLED-WATER',
+                'quantity' => 1,
+            ],
+
+            // Canned Soda
+            [
+                'product' => 'DRINK-SODA',
+                'inventory' => 'INV-CANNED-SODA',
+                'quantity' => 1,
+            ],
+
+            // Extra Cheese Dip
+            [
+                'product' => 'ADD-CHEESE-DIP',
+                'inventory' => 'INV-CHEESE-DIP',
+                'quantity' => 50,
+            ],
+
+            // Ketchup Sachet
+            [
+                'product' => 'ADD-KETCHUP',
+                'inventory' => 'INV-KETCHUP-SACHET',
+                'quantity' => 1,
             ],
         ];
 
         foreach ($recipes as $recipe) {
+            $product = Product::where(
+                'sku',
+                $recipe['product']
+            )->firstOrFail();
+
+            $inventoryItem = InventoryItem::where(
+                'sku',
+                $recipe['inventory']
+            )->firstOrFail();
+
             ProductRecipe::updateOrCreate(
                 [
-                    'product_id' => $recipe['product_id'],
-                    'inventory_item_id' => $recipe['inventory_item_id'],
+                    'product_id' => $product->id,
+                    'inventory_item_id' => $inventoryItem->id,
                 ],
                 [
                     'quantity' => $recipe['quantity'],

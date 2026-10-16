@@ -44,6 +44,44 @@ class InventoryItemSeeder extends Seeder
                 'uom_id' => $gram->id,
                 'reorder_level' => 5000,
             ],
+
+            // Additional inventory items
+            [
+                'name' => 'Cheese Powder',
+                'sku' => 'INV-CHEESE-POWDER',
+                'uom_id' => $gram->id,
+                'reorder_level' => 2000,
+            ],
+            [
+                'name' => 'Bottled Water',
+                'sku' => 'INV-BOTTLED-WATER',
+                'uom_id' => $piece->id,
+                'reorder_level' => 24,
+            ],
+            [
+                'name' => 'Canned Soda',
+                'sku' => 'INV-CANNED-SODA',
+                'uom_id' => $piece->id,
+                'reorder_level' => 24,
+            ],
+            [
+                'name' => 'Cheese Dip',
+                'sku' => 'INV-CHEESE-DIP',
+                'uom_id' => $gram->id,
+                'reorder_level' => 1000,
+            ],
+            [
+                'name' => 'Ketchup Sachet',
+                'sku' => 'INV-KETCHUP-SACHET',
+                'uom_id' => $piece->id,
+                'reorder_level' => 50,
+            ],
+            [
+                'name' => 'Sour Cream Powder',
+                'sku' => 'INV-SOUR-CREAM',
+                'uom_id' => $gram->id,
+                'reorder_level' => 2000,
+            ],
         ];
 
         foreach ($items as $item) {

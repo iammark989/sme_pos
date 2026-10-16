@@ -19,8 +19,16 @@ class WarehouseSeeder extends Seeder
 
         Warehouse::create([
             'branch_id' => 1,
-            'name' => 'Main Branch Warehouse',
+            'name' => 'Pampanga Branch Warehouse',
             'code' => 'WH-001',
+            'type' => 'branch',
+            'is_active' => true,
+        ]);
+
+        Warehouse::create([
+            'branch_id' => 1,
+            'name' => 'Manila Branch Warehouse',
+            'code' => 'WH-002',
             'type' => 'branch',
             'is_active' => true,
         ]);
