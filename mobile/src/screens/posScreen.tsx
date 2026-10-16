@@ -23,12 +23,14 @@ import {
   type SaleResponse,
 } from '../services/saleService';
 
+import ReceiptScreen from './ReceiptScreen';
+
 
 interface PosScreenProps {
   onBack: () => void;
 }
 
-interface CartItem {
+export interface CartItem {
   product: PosProduct;
   quantity: number;
 }
@@ -51,8 +53,17 @@ export default function PosScreen({ onBack }: PosScreenProps) {
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
+  const [completedItems, setCompletedItems] = useState<CartItem[]>([]);
+
   const [completedSale, setCompletedSale] =
     useState<SaleResponse['data'] | null>(null);
+    
+
+  const [completedPayment, setCompletedPayment] = useState<{
+    method: PaymentMethod;
+    amountPaid: number;
+    paymentReference?: string;
+  } | null>(null);
 
   const addToCart = (product: PosProduct) => {
     if (!product.can_sell || product.max_quantity < 1) {
@@ -184,14 +195,21 @@ export default function PosScreen({ onBack }: PosScreenProps) {
       });
 
       setCompletedSale(result.data);
+
+      const purchasedItems = cart.map((item) => ({ ...item }));
+      setCompletedItems(purchasedItems);
+
+      setCompletedPayment({
+        method: paymentMethod,
+        amountPaid: paid,
+        ...(paymentMethod === 'gcash'
+          ? { paymentReference: paymentReference.trim() }
+          : {}),
+      });
+
       setCart([]);
       setAmountPaid('');
       setPaymentReference('');
-
-      Alert.alert(
-        'Sale completed',
-        `Receipt: ${result.data.sale.sale_number}\nChange: ₱${Number(result.data.change_amount).toFixed(2)}`,
-      );
 
       await loadProducts(true);
     } catch (error) {
@@ -299,6 +317,27 @@ export default function PosScreen({ onBack }: PosScreenProps) {
       </Pressable>
     );
   };
+
+  if (completedSale && completedPayment) {
+    return (
+      <ReceiptScreen
+        saleData={completedSale}
+        items={completedItems}
+        payment={completedPayment}
+        onNewSale={() => {
+          setCompletedSale(null);
+          setCompletedPayment(null);
+          setCompletedItems([]);
+        }}
+        onBack={() => {
+          setCompletedSale(null);
+          setCompletedPayment(null);
+          setCompletedItems([]);
+          onBack();
+        }}
+      />
+    );
+  }
 
 
   return (
