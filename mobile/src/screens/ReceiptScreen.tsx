@@ -1,10 +1,13 @@
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+
+import { printReceipt } from '../services/receiptPrintService';
 
 import type { PaymentMethod, SaleResponse } from '../services/saleService';
 import type { CartItem } from './PosScreen';
@@ -31,6 +34,31 @@ export default function ReceiptScreen({
   const sale = saleData.sale;
   const total = Number(sale.total_amount);
   const change = Number(saleData.change_amount);
+
+  const handlePrintReceipt = async () => {
+    try {
+        const result = await printReceipt({
+        saleData,
+        items,
+        payment,
+        });
+
+        Alert.alert(
+        result.success ? 'Receipt Printed' : 'Printing Not Available',
+        result.message,
+        );
+    } catch (error) {
+        console.error('Receipt printing error:', error);
+
+        Alert.alert(
+        'Printing Error',
+        error instanceof Error
+            ? error.message
+            : 'An unexpected error occurred while preparing the receipt.',
+        );
+    }
+    };
+  
 
   return (
     <ScrollView
@@ -151,6 +179,15 @@ export default function ReceiptScreen({
           Thank you for your purchase!
         </Text>
       </View>
+
+       <Pressable
+        style={styles.printButton}
+        onPress={handlePrintReceipt}
+      >
+        <Text style={styles.printButtonText}>
+          Print / Reprint Receipt
+        </Text>
+      </Pressable>
 
       <Pressable style={styles.primaryButton} onPress={onNewSale}>
         <Text style={styles.primaryButtonText}>Start New Sale</Text>
@@ -358,5 +395,19 @@ const styles = StyleSheet.create({
     color: '#374151',
     fontSize: 14,
     fontWeight: '700',
+  },
+
+  printButton: {
+    marginTop: 16,
+    minHeight: 50,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0F766E',
+  },
+  printButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });
