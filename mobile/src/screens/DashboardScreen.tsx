@@ -9,7 +9,7 @@ import {
 
 import { useState } from 'react';
 
-import PosScreen from './posScreen';
+import PosScreen from './PosScreen';
 
 import type { AuthUser } from '../services/authService';
 
@@ -25,21 +25,21 @@ export default function DashboardScreen({
   const userRole = user.role?.name ?? 'User';
   const userBranch = user.branch?.name ?? 'Not assigned';
 
-  const [isPosOpen, setIsPosOpen] = useState(false);
+ const [isPosOpen, setIsPosOpen] = useState(false);
   
 
   const openFeature = (feature: string) => {
-
-    if (isPosOpen) {
-    return (
-      <PosScreen onBack={() => setIsPosOpen(false)} />
-    );
-  }
     Alert.alert(
       feature,
       'This feature will be connected in a later step.',
     );
   };
+
+  if (isPosOpen) {
+    return (
+      <PosScreen onBack={() => setIsPosOpen(false)} />
+    );
+  }
 
   return (
     <ScrollView
@@ -112,7 +112,9 @@ export default function DashboardScreen({
         <View style={styles.actionGrid}>
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => setIsPosOpen(true)}
+            onPress={() => {
+            setIsPosOpen(true);
+          }}
             activeOpacity={0.8}
           >
             <View style={styles.actionIconBlue}>

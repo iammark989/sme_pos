@@ -19,7 +19,7 @@ export interface PosProduct {
   id: number;
   name: string;
   sku?: string | null;
-  price: string | number;
+ selling_price: string | number;
   category?: {
     id: number;
     name: string;
