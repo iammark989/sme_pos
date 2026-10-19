@@ -13,6 +13,8 @@ import PosScreen from './PosScreen';
 
 import type { AuthUser } from '../services/authService';
 
+import PrinterSetupScreen from './PrinterSetupScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -25,7 +27,17 @@ export default function DashboardScreen({
   const userRole = user.role?.name ?? 'User';
   const userBranch = user.branch?.name ?? 'Not assigned';
 
- const [isPosOpen, setIsPosOpen] = useState(false);
+  const [isPrinterSetupOpen, setIsPrinterSetupOpen] = useState(false);
+
+  const [isPosOpen, setIsPosOpen] = useState(false);
+
+  if (isPrinterSetupOpen) {
+    return (
+      <PrinterSetupScreen
+        onBack={() => setIsPrinterSetupOpen(false)}
+      />
+    );
+  }
   
 
   const openFeature = (feature: string) => {
@@ -165,6 +177,22 @@ export default function DashboardScreen({
             <Text style={styles.actionTitle}>My Account</Text>
             <Text style={styles.actionDescription}>
               View account details
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => setIsPrinterSetupOpen(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionIconBlue}>
+              <Text style={styles.actionIconText}>PRINT</Text>
+            </View>
+
+            <Text style={styles.actionTitle}>Printer Setup</Text>
+
+            <Text style={styles.actionDescription}>
+              Connect a Bluetooth receipt printer
             </Text>
           </TouchableOpacity>
         </View>
