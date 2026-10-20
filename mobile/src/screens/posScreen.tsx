@@ -211,7 +211,9 @@ export default function PosScreen({ onBack }: PosScreenProps) {
       setAmountPaid('');
       setPaymentReference('');
 
-      await loadProducts(true);
+      // The sale is already completed.
+      // Refresh product data without treating a refresh failure as a checkout failure.
+      void loadProducts(true);
     } catch (error) {
       Alert.alert(
         'Checkout failed',

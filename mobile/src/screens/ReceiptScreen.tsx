@@ -11,6 +11,7 @@ import { printReceipt } from '../services/receiptPrintService';
 
 import type { PaymentMethod, SaleResponse } from '../services/saleService';
 import type { CartItem } from './PosScreen';
+import { useEffect, useRef } from 'react';
 
 interface ReceiptScreenProps {
   saleData: SaleResponse['data'];
@@ -20,6 +21,8 @@ interface ReceiptScreenProps {
     amountPaid: number;
     paymentReference?: string;
   };
+  autoPrintOnMount?: boolean;
+  isHistoricalReceipt?: boolean;
   onNewSale: () => void;
   onBack: () => void;
 }
@@ -30,10 +33,48 @@ export default function ReceiptScreen({
   payment,
   onNewSale,
   onBack,
+  autoPrintOnMount = true,
+  isHistoricalReceipt = false,
 }: ReceiptScreenProps) {
   const sale = saleData.sale;
   const total = Number(sale.total_amount);
   const change = Number(saleData.change_amount);
+  
+  const autoPrintAttempted = useRef(false);
+
+  useEffect(() => {
+    if (!autoPrintOnMount || autoPrintAttempted.current) {
+      return;
+    }
+
+    autoPrintAttempted.current = true;
+
+    const autoPrint = async () => {
+      try {
+        const result = await printReceipt({
+          saleData,
+          items,
+          payment,
+        });
+
+        if (!result.success) {
+          Alert.alert(
+            'Automatic Printing Failed',
+            `${result.message}\n\nYou can retry using Print / Reprint Receipt.`,
+          );
+        }
+      } catch (error) {
+        Alert.alert(
+          'Automatic Printing Failed',
+          error instanceof Error
+            ? `${error.message}\n\nYou can retry using Print / Reprint Receipt.`
+            : 'Unable to print the receipt. You can retry manually.',
+        );
+      }
+    };
+
+    void autoPrint();
+  }, [saleData, items, payment]);
 
   const handlePrintReceipt = async () => {
     try {
@@ -58,6 +99,16 @@ export default function ReceiptScreen({
         );
     }
     };
+
+    useEffect(() => {
+    if (!autoPrintOnMount || autoPrintAttempted.current) {
+      return;
+    }
+
+    autoPrintAttempted.current = true;
+
+    // Keep the rest of your existing autoPrint logic unchanged.
+  }, [saleData, items, payment, autoPrintOnMount]);
   
 
   return (
@@ -189,13 +240,36 @@ export default function ReceiptScreen({
         </Text>
       </Pressable>
 
-      <Pressable style={styles.primaryButton} onPress={onNewSale}>
-        <Text style={styles.primaryButtonText}>Start New Sale</Text>
-      </Pressable>
+      {isHistoricalReceipt ? (
+        <Pressable
+          style={styles.secondaryButton}
+          onPress={onBack}
+        >
+          <Text style={styles.secondaryButtonText}>
+            Back to Transactions List
+          </Text>
+        </Pressable>
+      ) : (
+        <>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={onNewSale}
+          >
+            <Text style={styles.primaryButtonText}>
+              Start New Sale
+            </Text>
+          </Pressable>
 
-      <Pressable style={styles.secondaryButton} onPress={onBack}>
-        <Text style={styles.secondaryButtonText}>Back to Dashboard</Text>
-      </Pressable>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={onBack}
+          >
+            <Text style={styles.secondaryButtonText}>
+              Back to Dashboard
+            </Text>
+          </Pressable>
+        </>
+      )}
     </ScrollView>
   );
 }

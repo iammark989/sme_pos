@@ -15,6 +15,12 @@ import type { AuthUser } from '../services/authService';
 
 import PrinterSetupScreen from './PrinterSetupScreen';
 
+import SalesTransactionsScreen from './SalesTransactionsScreen';
+
+import type { SaleTransaction } from '../services/saleService';
+
+import HistoricalReceiptScreen from './HistoricalReceiptScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -30,11 +36,36 @@ export default function DashboardScreen({
   const [isPrinterSetupOpen, setIsPrinterSetupOpen] = useState(false);
 
   const [isPosOpen, setIsPosOpen] = useState(false);
+  
+
+  const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<SaleTransaction | null>(null);
 
   if (isPrinterSetupOpen) {
     return (
       <PrinterSetupScreen
         onBack={() => setIsPrinterSetupOpen(false)}
+      />
+    );
+  }
+
+  if (selectedTransaction) {
+    return (
+      <HistoricalReceiptScreen
+        saleId={selectedTransaction.id}
+        onBack={() => setSelectedTransaction(null)}
+      />
+    );
+  }
+
+  if (isTransactionsOpen) {
+    return (
+      <SalesTransactionsScreen
+        onBack={() => setIsTransactionsOpen(false)}
+        onSelectTransaction={(transaction) => {
+          setSelectedTransaction(transaction);
+        }}
       />
     );
   }
@@ -140,7 +171,7 @@ export default function DashboardScreen({
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => openFeature('Sales Transactions')}
+            onPress={() => setIsTransactionsOpen(true)}
             activeOpacity={0.8}
           >
             <View style={styles.actionIconGreen}>
