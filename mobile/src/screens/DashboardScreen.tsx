@@ -21,6 +21,8 @@ import type { SaleTransaction } from '../services/saleService';
 
 import HistoricalReceiptScreen from './HistoricalReceiptScreen';
 
+import ClosePosScreen from './ClosePosScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -36,11 +38,21 @@ export default function DashboardScreen({
   const [isPrinterSetupOpen, setIsPrinterSetupOpen] = useState(false);
 
   const [isPosOpen, setIsPosOpen] = useState(false);
-  
+
+  const [isClosePosOpen, setIsClosePosOpen] = useState(false);  
 
   const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<SaleTransaction | null>(null);
+
+  if (isClosePosOpen) {
+  return (
+    <ClosePosScreen
+      onBack={() => setIsClosePosOpen(false)}
+      onClosed={() => setIsClosePosOpen(false)}
+    />
+  );
+}
 
   if (isPrinterSetupOpen) {
     return (
@@ -180,6 +192,22 @@ export default function DashboardScreen({
             <Text style={styles.actionTitle}>Transactions</Text>
             <Text style={styles.actionDescription}>
               View sales history
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => setIsClosePosOpen(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionIconOrange}>
+              <Text style={styles.actionIconText}>CLOSE</Text>
+            </View>
+
+            <Text style={styles.actionTitle}>Close POS</Text>
+
+            <Text style={styles.actionDescription}>
+              Reconcile cash and close your shift
             </Text>
           </TouchableOpacity>
 
