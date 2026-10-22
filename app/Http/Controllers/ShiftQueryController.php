@@ -25,6 +25,7 @@ class ShiftQueryController extends Controller
                 'user',
                 'branch',
                 'warehouse',
+                'reading',
             ])
             ->latest('opened_at');
 
@@ -119,6 +120,7 @@ class ShiftQueryController extends Controller
             'branch',
             'warehouse',
             'sales.payments',
+            'reading',
         ]);
 
         $cashSales = $shift->sales()

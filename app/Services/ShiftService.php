@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\Branch;
+use App\Models\Sale;
 use App\Models\Shift;
+use App\Models\ShiftReading;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
@@ -83,12 +85,6 @@ class ShiftService
             throw new RuntimeException('Actual cash cannot be negative.');
         }
 
-        if ($shift->status !== 'open') {
-            throw new RuntimeException(
-                'The shift is already closed.'
-            );
-        }
-
         return DB::transaction(function () use (
             $shift,
             $actualCash,
@@ -104,18 +100,126 @@ class ShiftService
                 );
             }
 
+            // Load sales and their payments for this shift only.
+            $sales = $shift->sales()
+                ->with('payments')
+                ->get();
+
+            $completedSales = $sales->where('status', 'completed');
+            $voidedSales = $sales->where('status', 'voided');
+
+            $cashSales = $completedSales->filter(
+                fn ($sale) => $sale->payments->contains(
+                    fn ($payment) => $payment->method === 'cash'
+                )
+            );
+
+            $gcashSales = $completedSales->filter(
+                fn ($sale) => $sale->payments->contains(
+                    fn ($payment) => $payment->method === 'gcash'
+                )
+            );
+
+            $cashTotal = round(
+                $cashSales->sum(
+                    fn ($sale) => (float) $sale->total_amount
+                ),
+                2
+            );
+
+            $gcashTotal = round(
+                $gcashSales->sum(
+                    fn ($sale) => (float) $sale->total_amount
+                ),
+                2
+            );
+
+            $voidTotal = round(
+                $voidedSales->sum(
+                    fn ($sale) => (float) $sale->total_amount
+                ),
+                2
+            );
+
             $expectedCash = (float) $shift->expected_cash;
-            $cashVariance = $actualCash - $expectedCash;
+            $cashVariance = round($actualCash - $expectedCash, 2);
+            $closedAt = now();
+
+            $snapshot = [
+                'reading_type' => 'shift_closing',
+                'shift_id' => $shift->id,
+                'branch' => [
+                    'id' => $shift->branch_id,
+                    'name' => $shift->branch()->value('name'),
+                ],
+                'warehouse' => [
+                    'id' => $shift->warehouse_id,
+                    'name' => $shift->warehouse()->value('name'),
+                ],
+                'cashier' => [
+                    'id' => $shift->user_id,
+                    'name' => $shift->user()->value('name'),
+                ],
+                'opened_at' => $shift->opened_at->toISOString(),
+                'closed_at' => $closedAt->toISOString(),
+                'sales' => [
+                    'cash' => [
+                        'transaction_count' => $cashSales->count(),
+                        'total_amount' => $cashTotal,
+                    ],
+                    'gcash' => [
+                        'transaction_count' => $gcashSales->count(),
+                        'total_amount' => $gcashTotal,
+                    ],
+                    'voids' => [
+                        'transaction_count' => $voidedSales->count(),
+                        'total_amount' => $voidTotal,
+                    ],
+                    'completed_transaction_count' => $completedSales->count(),
+                ],
+                'cash_reconciliation' => [
+                    'opening_cash' => (float) $shift->opening_cash,
+                    'expected_cash' => $expectedCash,
+                    'actual_cash' => $actualCash,
+                    'variance' => $cashVariance,
+                ],
+                'closing_notes' => $closingNotes,
+            ];
 
             $shift->update([
                 'status' => 'closed',
-                'closed_at' => now(),
+                'closed_at' => $closedAt,
                 'actual_cash' => $actualCash,
                 'cash_variance' => $cashVariance,
                 'closing_notes' => $closingNotes,
             ]);
 
-            return $shift->fresh();
+            // A unique shift_id in the database prevents duplicate readings.
+            $reading = ShiftReading::create([
+                'reading_number' => 'XR-' . $shift->id . '-' .
+                    $closedAt->format('YmdHis'),
+                'shift_id' => $shift->id,
+                'branch_id' => $shift->branch_id,
+                'warehouse_id' => $shift->warehouse_id,
+                'user_id' => $shift->user_id,
+                'opened_at' => $shift->opened_at,
+                'closed_at' => $closedAt,
+                'generated_at' => $closedAt,
+                'cash_transaction_count' => $cashSales->count(),
+                'cash_sales_total' => $cashTotal,
+                'gcash_transaction_count' => $gcashSales->count(),
+                'gcash_sales_total' => $gcashTotal,
+                'void_transaction_count' => $voidedSales->count(),
+                'void_sales_total' => $voidTotal,
+                'opening_cash' => $shift->opening_cash,
+                'expected_cash' => $expectedCash,
+                'actual_cash' => $actualCash,
+                'cash_variance' => $cashVariance,
+                'snapshot' => $snapshot,
+            ]);
+
+            // Return the closed shift with its saved reading available.
+            return $shift->fresh()->load('reading');
         });
     }
 }

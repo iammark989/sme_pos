@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Branch;
 use App\Models\Sale;
+use App\Models\ShiftReading;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Model;
@@ -57,5 +58,10 @@ class Shift extends Model
     public function sales(): HasMany
     {
         return $this->hasMany(Sale::class);
+    }
+
+    public function reading(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ShiftReading::class);
     }
 }

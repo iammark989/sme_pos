@@ -206,6 +206,7 @@ class ShiftController extends Controller
             'user',
             'branch',
             'warehouse',
+            'reading',
         ]);
 
         return response()->json([
