@@ -28,6 +28,7 @@ import ReceiptScreen from './ReceiptScreen';
 
 interface PosScreenProps {
   onBack: () => void;
+  onOpenPos: () => void;
 }
 
 export interface CartItem {
@@ -35,12 +36,17 @@ export interface CartItem {
   quantity: number;
 }
 
-export default function PosScreen({ onBack }: PosScreenProps) {
+export default function PosScreen({
+  onBack,
+  onOpenPos,
+}: PosScreenProps) {
   const [shift, setShift] = useState<PosShift | null>(null);
   const [products, setProducts] = useState<PosProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  const [requiresOpenShift, setRequiresOpenShift] = useState(false);
 
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -235,22 +241,34 @@ export default function PosScreen({ onBack }: PosScreenProps) {
     }
 
     setErrorMessage('');
+    setRequiresOpenShift(false);
 
     try {
       const result = await getPosProducts();
 
       setShift(result.shift);
       setProducts(result.products);
-    } catch (error) {
-      setShift(null);
-      setProducts([]);
+      } catch (error) {
+        setShift(null);
+        setProducts([]);
 
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : 'Unable to load POS products. Please try again.',
-      );
-    } finally {
+        const message =
+          error instanceof Error
+            ? error.message
+            : 'Unable to load POS products. Please try again.';
+
+        const isMissingShift = message
+          .toLowerCase()
+          .includes('must have an open shift');
+
+        setRequiresOpenShift(isMissingShift);
+
+        setErrorMessage(
+          isMissingShift
+            ? 'You need to open a POS shift before you can load products or process sales.'
+            : message,
+        );
+      } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
@@ -379,15 +397,27 @@ export default function PosScreen({ onBack }: PosScreenProps) {
         </View>
       ) : errorMessage ? (
         <View style={styles.centerContent}>
-          <Text style={styles.errorTitle}>Unable to load products</Text>
+          <Text style={styles.errorTitle}>
+            {requiresOpenShift ? 'No Active POS Shift' : 'Unable to load products'}
+          </Text>
+
           <Text style={styles.errorMessage}>{errorMessage}</Text>
 
-          <Pressable
-            style={styles.retryButton}
-            onPress={() => loadProducts()}
-          >
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </Pressable>
+          {requiresOpenShift ? (
+            <Pressable
+              style={styles.retryButton}
+              onPress={onOpenPos}
+            >
+              <Text style={styles.retryButtonText}>Open POS</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={styles.retryButton}
+              onPress={() => loadProducts()}
+            >
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </Pressable>
+          )}
         </View>
       ) : (
         

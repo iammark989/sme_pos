@@ -7,7 +7,7 @@ import {
   View,
 } from 'react-native';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import PosScreen from './PosScreen';
 
@@ -24,6 +24,8 @@ import HistoricalReceiptScreen from './HistoricalReceiptScreen';
 import ClosePosScreen from './ClosePosScreen';
 
 import OpenPosScreen from './OpenPosScreen';
+
+import { getCurrentShift } from '../services/posService';
 
 interface DashboardScreenProps {
   user: AuthUser;
@@ -49,11 +51,37 @@ export default function DashboardScreen({
   const [selectedTransaction, setSelectedTransaction] =
     useState<SaleTransaction | null>(null);
 
+  const [hasActiveShift, setHasActiveShift] = useState<boolean | null>(null);
+  const [isShiftStatusLoading, setIsShiftStatusLoading] = useState(true);
+
+  const refreshShiftStatus = useCallback(async () => {
+    try {
+      const result = await getCurrentShift();
+      setHasActiveShift(result.shift?.status === 'open');
+    } catch (error) {
+      console.error('Unable to refresh POS shift status:', error);
+      setHasActiveShift(null);
+    } finally {
+      setIsShiftStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshShiftStatus();
+  }, [refreshShiftStatus]);
+
+
   if (isClosePosOpen) {
     return (
       <ClosePosScreen
-        onBack={() => setIsClosePosOpen(false)}
-        onClosed={() => setIsClosePosOpen(false)}
+        onBack={() => {
+          setIsClosePosOpen(false);
+          void refreshShiftStatus();
+        }}
+        onClosed={() => {
+          setIsClosePosOpen(false);
+          void refreshShiftStatus();
+        }}
       />
     );
   }
@@ -61,8 +89,14 @@ export default function DashboardScreen({
   if (isOpenPosScreenOpen) {
     return (
       <OpenPosScreen
-        onBack={() => setIsOpenPosScreenOpen(false)}
-        onOpened={() => setIsOpenPosScreenOpen(false)}
+        onBack={() => {
+          setIsOpenPosScreenOpen(false);
+          void refreshShiftStatus();
+        }}
+        onOpened={() => {
+          setIsOpenPosScreenOpen(false);
+          void refreshShiftStatus();
+        }}
       />
     );
   }
@@ -105,7 +139,13 @@ export default function DashboardScreen({
 
   if (isPosOpen) {
     return (
-      <PosScreen onBack={() => setIsPosOpen(false)} />
+      <PosScreen
+        onBack={() => setIsPosOpen(false)}
+        onOpenPos={() => {
+          setIsPosOpen(false);
+          setIsOpenPosScreenOpen(true);
+        }}
+      />
     );
   }
 
@@ -208,37 +248,41 @@ export default function DashboardScreen({
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => setIsClosePosOpen(true)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconOrange}>
-              <Text style={styles.actionIconText}>CLOSE</Text>
-            </View>
+          {!isShiftStatusLoading && hasActiveShift === true && (
+              <TouchableOpacity
+                style={styles.actionCard}
+                onPress={() => setIsClosePosOpen(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.actionIconOrange}>
+                  <Text style={styles.actionIconText}>CLOSE</Text>
+                </View>
 
-            <Text style={styles.actionTitle}>Close POS</Text>
+                <Text style={styles.actionTitle}>Close POS</Text>
 
-            <Text style={styles.actionDescription}>
-              Reconcile cash and close your shift
-            </Text>
-          </TouchableOpacity>
+                <Text style={styles.actionDescription}>
+                  Reconcile cash and close your shift
+                </Text>
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => setIsOpenPosScreenOpen(true)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIconGreen}>
-              <Text style={styles.actionIconText}>OPEN</Text>
-            </View>
+            {!isShiftStatusLoading && hasActiveShift === false && (
+              <TouchableOpacity
+                style={styles.actionCard}
+                onPress={() => setIsOpenPosScreenOpen(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.actionIconGreen}>
+                  <Text style={styles.actionIconText}>OPEN</Text>
+                </View>
 
-            <Text style={styles.actionTitle}>Open POS</Text>
+                <Text style={styles.actionTitle}>Open POS</Text>
 
-            <Text style={styles.actionDescription}>
-              Start a shift and enter opening cash
-            </Text>
-          </TouchableOpacity>
+                <Text style={styles.actionDescription}>
+                  Start a shift and enter opening cash
+                </Text>
+              </TouchableOpacity>
+            )}
 
           <TouchableOpacity
             style={styles.actionCard}
