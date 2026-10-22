@@ -177,3 +177,66 @@ export async function closePosShift(
   return data.data.shift as ClosedShift;
 }
 
+
+export interface OpenShiftRequest {
+  opening_cash: number;
+  opening_notes?: string;
+}
+
+export interface OpenedShift {
+  id: number;
+  status: string;
+  opening_cash: string | number;
+  expected_cash: string | number;
+  opening_notes?: string | null;
+  opened_at?: string | null;
+  branch?: {
+    id: number;
+    name: string;
+  } | null;
+  warehouse?: {
+    id: number;
+    name: string;
+  } | null;
+}
+
+interface OpenShiftApiResponse {
+  message: string;
+  data: {
+    shift: OpenedShift;
+  };
+}
+
+export async function openPosShift(
+  request: OpenShiftRequest,
+): Promise<OpenedShift> {
+  const token = await getAuthToken();
+
+  if (!token) {
+    throw new Error('Your session has expired. Please sign in again.');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/shifts/open`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(request),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const validationErrors = data.errors
+      ? Object.values(data.errors).flat().join('\n')
+      : '';
+
+    throw new Error(
+      validationErrors || data.message || 'Unable to open the shift.',
+    );
+  }
+
+  return data.data.shift as OpenedShift;
+}

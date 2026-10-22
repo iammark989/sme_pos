@@ -23,6 +23,8 @@ import HistoricalReceiptScreen from './HistoricalReceiptScreen';
 
 import ClosePosScreen from './ClosePosScreen';
 
+import OpenPosScreen from './OpenPosScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -40,19 +42,30 @@ export default function DashboardScreen({
   const [isPosOpen, setIsPosOpen] = useState(false);
 
   const [isClosePosOpen, setIsClosePosOpen] = useState(false);  
+  
+  const [isOpenPosScreenOpen, setIsOpenPosScreenOpen] = useState(false);
 
   const [isTransactionsOpen, setIsTransactionsOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] =
     useState<SaleTransaction | null>(null);
 
   if (isClosePosOpen) {
-  return (
-    <ClosePosScreen
-      onBack={() => setIsClosePosOpen(false)}
-      onClosed={() => setIsClosePosOpen(false)}
-    />
-  );
-}
+    return (
+      <ClosePosScreen
+        onBack={() => setIsClosePosOpen(false)}
+        onClosed={() => setIsClosePosOpen(false)}
+      />
+    );
+  }
+
+  if (isOpenPosScreenOpen) {
+    return (
+      <OpenPosScreen
+        onBack={() => setIsOpenPosScreenOpen(false)}
+        onOpened={() => setIsOpenPosScreenOpen(false)}
+      />
+    );
+  }
 
   if (isPrinterSetupOpen) {
     return (
@@ -208,6 +221,22 @@ export default function DashboardScreen({
 
             <Text style={styles.actionDescription}>
               Reconcile cash and close your shift
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => setIsOpenPosScreenOpen(true)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.actionIconGreen}>
+              <Text style={styles.actionIconText}>OPEN</Text>
+            </View>
+
+            <Text style={styles.actionTitle}>Open POS</Text>
+
+            <Text style={styles.actionDescription}>
+              Start a shift and enter opening cash
             </Text>
           </TouchableOpacity>
 
