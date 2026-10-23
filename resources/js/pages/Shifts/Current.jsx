@@ -11,6 +11,10 @@ export default function CurrentShift() {
     const [submitError, setSubmitError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
     const [shiftSummary, setShiftSummary] = useState(null);
+    const [printReading, setPrintReading] = useState(null);
+    const [autoPrintReading, setAutoPrintReading] = useState(false);
+    const [showZReading, setShowZReading] = useState(false);
+    const [closedShift, setClosedShift] = useState(null);
     const loadCurrentShift = async () => {
         setLoading(true);
         setError('');
@@ -38,6 +42,16 @@ export default function CurrentShift() {
     useEffect(() => {
         loadCurrentShift();
     }, []);
+
+    // Print the saved X-reading after the close response has rendered.
+    useEffect(() => {
+        if (!autoPrintReading || !printReading) return;
+        const timer = window.setTimeout(() => {
+            window.print();
+            setAutoPrintReading(false);
+        }, 300);
+        return () => window.clearTimeout(timer);
+    }, [autoPrintReading, printReading]);
     const handleCloseShift = async (event) => {
         event.preventDefault();
         setSubmitting(true);
@@ -62,11 +76,25 @@ export default function CurrentShift() {
                     result.message || 'Failed to close shift.'
                 );
             }
+            const closed = result.data?.shift ?? null;
+            const reading = closed?.reading ?? null;
+
             setSuccessMessage('Shift closed successfully.');
+            setClosedShift(closed);
+            setPrintReading(reading);
             setShift(null);
             setActualCash('');
             setClosingNotes('');
-            window.location.href = '/pos';
+            setShowZReading(true);
+
+            // Do not ask staff to close the shift again if a reading is missing.
+            if (reading) {
+                setAutoPrintReading(true);
+            } else {
+                setSubmitError(
+                    'The shift was closed, but the saved X-reading was not returned. Please contact an administrator.'
+                );
+            }
         } catch (error) {
             setSubmitError(error.message || 'Failed to close shift.');
         } finally {
@@ -93,9 +121,85 @@ export default function CurrentShift() {
             : cashVariance > 0
                 ? 'Cash Over'
                 : 'Cash Short';
+    const readingSnapshot = printReading?.snapshot ?? {};
+    const readingSales = readingSnapshot.sales ?? {};
+    const readingCash = readingSnapshot.cash_reconciliation ?? {};
+    const readingBranch = readingSnapshot.branch ?? {};
+    const readingWarehouse = readingSnapshot.warehouse ?? {};
+    const readingCashier = readingSnapshot.cashier ?? {};
     return (
         <AuthenticatedLayout>
             <Head title="Shift Closing" />
+            <style>{`
+                .x-reading-print { display: none; }
+                @media print {
+                    @page { size: 80mm auto; margin: 3mm; }
+                    body * { visibility: hidden !important; }
+                    .x-reading-print,
+                    .x-reading-print * { visibility: visible !important; }
+                    .x-reading-print {
+                        display: block !important;
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 74mm;
+                        padding: 0;
+                        margin: 0;
+                        color: #000 !important;
+                        background: #fff !important;
+                        font: 11px/1.35 Arial, sans-serif;
+                    }
+                    .x-reading-print h1,
+                    .x-reading-print h2,
+                    .x-reading-print p { margin: 0 0 4px; }
+                    .x-reading-print .print-rule {
+                        border-top: 1px dashed #000;
+                        margin: 6px 0;
+                    }
+                    .x-reading-print .print-row {
+                        display: flex;
+                        justify-content: space-between;
+                        gap: 8px;
+                    }
+                    .x-reading-print .print-strong { font-weight: 700; }
+                }
+            `}</style>
+
+            <div className="x-reading-print" aria-hidden="true">
+                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                    <h1 style={{ fontSize: '16px', fontWeight: 700 }}>X-READING</h1>
+                    <p>SHIFT CLOSING REPORT</p>
+                    <p>{readingBranch.name || closedShift?.branch?.name || 'Branch'}</p>
+                    <p>{readingWarehouse.name || closedShift?.warehouse?.name || 'Warehouse'}</p>
+                </div>
+                <div className="print-rule" />
+                <p><strong>Reading No:</strong> {printReading?.reading_number || '-'}</p>
+                <p><strong>Shift ID:</strong> {printReading?.shift_id || closedShift?.id || '-'}</p>
+                <p><strong>Cashier:</strong> {readingCashier.name || '-'}</p>
+                <p><strong>Opened:</strong> {readingSnapshot.opened_at ? new Date(readingSnapshot.opened_at).toLocaleString() : '-'}</p>
+                <p><strong>Closed:</strong> {readingSnapshot.closed_at ? new Date(readingSnapshot.closed_at).toLocaleString() : '-'}</p>
+                <div className="print-rule" />
+                <h2 style={{ fontWeight: 700 }}>SALES SUMMARY</h2>
+                <div className="print-row"><span>Cash ({readingSales.cash?.transaction_count ?? 0})</span><span>{money(readingSales.cash?.total_amount)}</span></div>
+                <div className="print-row"><span>GCash ({readingSales.gcash?.transaction_count ?? 0})</span><span>{money(readingSales.gcash?.total_amount)}</span></div>
+                <div className="print-row"><span>Voids ({readingSales.voids?.transaction_count ?? 0})</span><span>{money(readingSales.voids?.total_amount)}</span></div>
+                <div className="print-row print-strong"><span>Completed Transactions</span><span>{readingSales.completed_transaction_count ?? 0}</span></div>
+                <div className="print-rule" />
+                <h2 style={{ fontWeight: 700 }}>CASH RECONCILIATION</h2>
+                <div className="print-row"><span>Opening Cash</span><span>{money(readingCash.opening_cash)}</span></div>
+                <div className="print-row"><span>Expected Cash</span><span>{money(readingCash.expected_cash)}</span></div>
+                <div className="print-row"><span>Actual Cash</span><span>{money(readingCash.actual_cash)}</span></div>
+                <div className="print-row print-strong"><span>Variance</span><span>{money(readingCash.variance)}</span></div>
+                {readingSnapshot.closing_notes && (
+                    <>
+                        <div className="print-rule" />
+                        <p><strong>Closing Notes:</strong></p>
+                        <p>{readingSnapshot.closing_notes}</p>
+                    </>
+                )}
+                <div className="print-rule" />
+                <p style={{ textAlign: 'center', marginTop: '8px' }}>End of X-reading</p>
+            </div>
             <div className="py-6">
                 <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
                     <div className="mb-6">
@@ -453,6 +557,109 @@ export default function CurrentShift() {
                     )}
                 </div>
             </div>
+            {showZReading && closedShift && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-2xl">
+                        <div className="border-b px-6 py-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900">Z-Reading Summary</h2>
+                                    <p className="mt-1 text-sm text-gray-500">Shift closed successfully. Review the final totals below.</p>
+                                </div>
+                                <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">Closed</span>
+                            </div>
+                            {printReading?.reading_number && (
+                                <p className="mt-3 text-sm text-gray-600">
+                                    X-reading reference: <span className="font-semibold text-gray-900">{printReading.reading_number}</span>
+                                </p>
+                            )}
+                        </div>
+                        <div className="space-y-5 p-6">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div className="rounded-lg bg-gray-50 p-4">
+                                    <p className="text-xs text-gray-500">Branch</p>
+                                    <p className="mt-1 font-semibold text-gray-900">{readingBranch.name || closedShift.branch?.name || '-'}</p>
+                                </div>
+                                <div className="rounded-lg bg-gray-50 p-4">
+                                    <p className="text-xs text-gray-500">Cashier</p>
+                                    <p className="mt-1 font-semibold text-gray-900">{readingCashier.name || '-'}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Sales Summary</h3>
+                                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                                        <p className="text-sm text-emerald-800">Cash Sales</p>
+                                        <p className="mt-1 text-xl font-bold text-emerald-900">{money(readingSales.cash?.total_amount)}</p>
+                                        <p className="text-xs text-emerald-800">{readingSales.cash?.transaction_count ?? 0} transaction(s)</p>
+                                    </div>
+                                    <div className="rounded-lg border border-sky-200 bg-sky-50 p-4">
+                                        <p className="text-sm text-sky-800">GCash Sales</p>
+                                        <p className="mt-1 text-xl font-bold text-sky-900">{money(readingSales.gcash?.total_amount)}</p>
+                                        <p className="text-xs text-sky-800">{readingSales.gcash?.transaction_count ?? 0} transaction(s)</p>
+                                    </div>
+                                    <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                                        <p className="text-sm text-red-800">Voided Sales</p>
+                                        <p className="mt-1 text-xl font-bold text-red-900">{money(readingSales.voids?.total_amount)}</p>
+                                        <p className="text-xs text-red-800">{readingSales.voids?.transaction_count ?? 0} transaction(s)</p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 rounded-lg border p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-sm text-gray-600">Completed transactions</span>
+                                        <span className="font-semibold text-gray-900">{readingSales.completed_transaction_count ?? 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-600">Cash Reconciliation</h3>
+                                <div className="space-y-3 rounded-lg border p-4">
+                                    {[
+                                        ['Opening Cash', readingCash.opening_cash],
+                                        ['Expected Cash', readingCash.expected_cash],
+                                        ['Actual Cash', readingCash.actual_cash],
+                                        ['Cash Variance', readingCash.variance],
+                                    ].map(([label, value]) => (
+                                        <div key={label} className="flex items-center justify-between gap-3">
+                                            <span className="text-sm text-gray-600">{label}</span>
+                                            <span className="font-semibold text-gray-900">{money(value)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            {readingSnapshot.closing_notes && (
+                                <div className="rounded-lg bg-amber-50 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wide text-amber-800">Closing Notes</p>
+                                    <p className="mt-2 whitespace-pre-wrap text-sm text-amber-900">{readingSnapshot.closing_notes}</p>
+                                </div>
+                            )}
+                            {autoPrintReading && <p className="text-sm text-gray-500">Opening the X-reading print dialog…</p>}
+                            {!printReading && (
+                                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                    The shift is closed, but the X-reading data was not returned. Please ask an administrator to review this shift.
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-3 border-t px-6 py-4">
+                            {printReading && (
+                                <button type="button" onClick={() => window.print()} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                    Print X-Reading Again
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowZReading(false);
+                                    window.location.href = '/pos';
+                                }}
+                                className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                            >
+                                Done — Return to POS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

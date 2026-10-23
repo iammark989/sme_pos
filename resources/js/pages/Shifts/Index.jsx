@@ -21,6 +21,8 @@ export default function Index() {
     const [showDetails, setShowDetails] = useState(false);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [detailsError, setDetailsError] = useState('');
+    const [printReading, setPrintReading] = useState(null);
+    const [printRequested, setPrintRequested] = useState(false);
 
     const [pagination, setPagination] = useState({
         current_page: 1,
@@ -170,6 +172,24 @@ export default function Index() {
         loadBranches();
     }, []);
 
+    // Print the saved X-reading snapshot without recalculating or changing the shift.
+    useEffect(() => {
+        if (!printRequested || !printReading) return;
+
+        const timer = window.setTimeout(() => {
+            window.print();
+            setPrintRequested(false);
+        }, 300);
+
+        return () => window.clearTimeout(timer);
+    }, [printRequested, printReading]);
+
+    const handleReprintXReading = (reading) => {
+        if (!reading) return;
+        setPrintReading(reading);
+        setPrintRequested(true);
+    };
+
     const formatDateTime = (value) => {
         if (!value) {
             return '-';
@@ -209,9 +229,87 @@ export default function Index() {
         return 'text-gray-700';
     };
 
+    const printSnapshot = printReading?.snapshot ?? {};
+    const printSales = printSnapshot.sales ?? {};
+    const printCash = printSnapshot.cash_reconciliation ?? {};
+    const printBranch = printSnapshot.branch ?? {};
+    const printWarehouse = printSnapshot.warehouse ?? {};
+    const printCashier = printSnapshot.cashier ?? {};
+
     return (
         <AuthenticatedLayout>
             <Head title="Shift History" />
+            <style>{`
+                .admin-x-reading-print { display: none; }
+                @media print {
+                    @page { size: 80mm auto; margin: 3mm; }
+                    body * { visibility: hidden !important; }
+                    .admin-x-reading-print,
+                    .admin-x-reading-print * { visibility: visible !important; }
+                    .admin-x-reading-print {
+                        display: block !important;
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 74mm;
+                        padding: 0;
+                        margin: 0;
+                        color: #000 !important;
+                        background: #fff !important;
+                        font: 11px/1.35 Arial, sans-serif;
+                    }
+                    .admin-x-reading-print h1,
+                    .admin-x-reading-print h2,
+                    .admin-x-reading-print p { margin: 0 0 4px; }
+                    .admin-x-reading-print .print-rule {
+                        border-top: 1px dashed #000;
+                        margin: 6px 0;
+                    }
+                    .admin-x-reading-print .print-row {
+                        display: flex;
+                        justify-content: space-between;
+                        gap: 8px;
+                    }
+                    .admin-x-reading-print .print-strong { font-weight: 700; }
+                }
+            `}</style>
+
+            {/* Dedicated receipt layout: only this report appears in print preview. */}
+            <div className="admin-x-reading-print" aria-hidden="true">
+                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                    <h1 style={{ fontSize: '16px', fontWeight: 700 }}>X-READING</h1>
+                    <p>SHIFT CLOSING REPORT</p>
+                    <p>{printBranch.name || 'Branch'}</p>
+                    <p>{printWarehouse.name || 'Warehouse'}</p>
+                </div>
+                <div className="print-rule" />
+                <p><strong>Reading No:</strong> {printReading?.reading_number || '-'}</p>
+                <p><strong>Shift ID:</strong> {printReading?.shift_id || printSnapshot.shift_id || '-'}</p>
+                <p><strong>Cashier:</strong> {printCashier.name || '-'}</p>
+                <p><strong>Opened:</strong> {printSnapshot.opened_at ? new Date(printSnapshot.opened_at).toLocaleString() : '-'}</p>
+                <p><strong>Closed:</strong> {printSnapshot.closed_at ? new Date(printSnapshot.closed_at).toLocaleString() : '-'}</p>
+                <div className="print-rule" />
+                <h2 style={{ fontWeight: 700 }}>SALES SUMMARY</h2>
+                <div className="print-row"><span>Cash ({printSales.cash?.transaction_count ?? printReading?.cash_transaction_count ?? 0})</span><span>{formatCurrency(printSales.cash?.total_amount ?? printReading?.cash_sales_total)}</span></div>
+                <div className="print-row"><span>GCash ({printSales.gcash?.transaction_count ?? printReading?.gcash_transaction_count ?? 0})</span><span>{formatCurrency(printSales.gcash?.total_amount ?? printReading?.gcash_sales_total)}</span></div>
+                <div className="print-row"><span>Voids ({printSales.voids?.transaction_count ?? printReading?.void_transaction_count ?? 0})</span><span>{formatCurrency(printSales.voids?.total_amount ?? printReading?.void_sales_total)}</span></div>
+                <div className="print-row print-strong"><span>Completed Transactions</span><span>{printSales.completed_transaction_count ?? '-'}</span></div>
+                <div className="print-rule" />
+                <h2 style={{ fontWeight: 700 }}>CASH RECONCILIATION</h2>
+                <div className="print-row"><span>Opening Cash</span><span>{formatCurrency(printCash.opening_cash ?? printReading?.opening_cash)}</span></div>
+                <div className="print-row"><span>Expected Cash</span><span>{formatCurrency(printCash.expected_cash ?? printReading?.expected_cash)}</span></div>
+                <div className="print-row"><span>Actual Cash</span><span>{formatCurrency(printCash.actual_cash ?? printReading?.actual_cash)}</span></div>
+                <div className="print-row print-strong"><span>Variance</span><span>{formatCurrency(printCash.variance ?? printReading?.cash_variance)}</span></div>
+                {printSnapshot.closing_notes && (
+                    <>
+                        <div className="print-rule" />
+                        <p><strong>Closing Notes:</strong></p>
+                        <p>{printSnapshot.closing_notes}</p>
+                    </>
+                )}
+                <div className="print-rule" />
+                <p style={{ textAlign: 'center', marginTop: '8px' }}>End of X-reading</p>
+            </div>
 
             <div className="py-6">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -554,7 +652,7 @@ export default function Index() {
                                                     <button
                                                         type="button"
                                                         onClick={() => loadShiftDetails(shift.id)}
-                                                        className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                                        className="cursor-pointer rounded-lg bg-white-300 px-3 py-2 text-sm font-medium text-gray hover:bg-gray-200 border"
                                                     >
                                                         View Details
                                                     </button>
@@ -774,6 +872,13 @@ export default function Index() {
                                     <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
                                         Saved Reading
                                     </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleReprintXReading(selectedShift.shift.reading)}
+                                        className="cursor-pointer rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                                    >
+                                        Reprint X-Reading
+                                    </button>
                                 </div>
 
                                 <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
