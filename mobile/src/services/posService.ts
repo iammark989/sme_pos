@@ -96,6 +96,29 @@ export interface CloseShiftRequest {
   closing_notes?: string;
 }
 
+export interface ShiftReading {
+  id: number;
+  reading_number: string;
+  shift_id: number;
+  branch_id: number;
+  warehouse_id: number;
+  user_id: number;
+  opened_at: string;
+  closed_at: string;
+  generated_at: string;
+  cash_transaction_count: number;
+  cash_sales_total: string | number;
+  gcash_transaction_count: number;
+  gcash_sales_total: string | number;
+  void_transaction_count: number;
+  void_sales_total: string | number;
+  opening_cash: string | number;
+  expected_cash: string | number;
+  actual_cash: string | number;
+  cash_variance: string | number;
+  snapshot: Record<string, unknown>;
+}
+
 export interface ClosedShift {
   id: number;
   status: string;
@@ -106,6 +129,7 @@ export interface ClosedShift {
   opened_at?: string | null;
   closed_at?: string | null;
   closing_notes?: string | null;
+  reading: ShiftReading;
 }
 
 interface CurrentShiftApiResponse {

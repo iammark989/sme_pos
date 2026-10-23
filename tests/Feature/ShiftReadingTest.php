@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use App\Models\Role;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
+use Laravel\Sanctum\Sanctum;
 
 class ShiftReadingTest extends TestCase
 {
@@ -163,4 +164,105 @@ class ShiftReadingTest extends TestCase
         $this->assertNotNull($shift->reading);
         $this->assertDatabaseCount('shift_readings', 1);
     }
+
+    public function test_shift_detail_api_returns_the_saved_x_reading(): void
+{
+    $branch = Branch::create([
+        'name' => 'API Test Branch',
+        'code' => 'API-TEST-BRANCH',
+        'is_active' => true,
+    ]);
+
+    $warehouse = Warehouse::create([
+        'branch_id' => $branch->id,
+        'name' => 'API Test Warehouse',
+        'code' => 'API-TEST-WH',
+        'type' => 'branch',
+        'is_active' => true,
+    ]);
+
+    $role = Role::create([
+        'name' => 'Staff',
+    ]);
+
+    $user = User::create([
+        'username' => 'api-test-cashier',
+        'first_name' => 'API',
+        'last_name' => 'Cashier',
+        'email' => 'api-cashier@example.test',
+        'password' => bcrypt('password'),
+        'role_id' => $role->id,
+        'branch_id' => $branch->id,
+        'is_active' => true,
+    ]);
+
+    $shift = Shift::create([
+        'branch_id' => $branch->id,
+        'warehouse_id' => $warehouse->id,
+        'user_id' => $user->id,
+        'status' => 'closed',
+        'opened_at' => now()->subHours(2),
+        'closed_at' => now(),
+        'opening_cash' => 500,
+        'expected_cash' => 599,
+        'actual_cash' => 599,
+        'cash_variance' => 0,
+    ]);
+
+    $reading = ShiftReading::create([
+        'reading_number' => 'XR-API-TEST-001',
+        'shift_id' => $shift->id,
+        'branch_id' => $branch->id,
+        'warehouse_id' => $warehouse->id,
+        'user_id' => $user->id,
+        'opened_at' => $shift->opened_at,
+        'closed_at' => $shift->closed_at,
+        'generated_at' => now(),
+        'cash_transaction_count' => 1,
+        'cash_sales_total' => 99,
+        'gcash_transaction_count' => 1,
+        'gcash_sales_total' => 200,
+        'void_transaction_count' => 1,
+        'void_sales_total' => 50,
+        'opening_cash' => 500,
+        'expected_cash' => 599,
+        'actual_cash' => 599,
+        'cash_variance' => 0,
+        'snapshot' => [
+            'reading_type' => 'shift_closing',
+            'sales' => [
+                'completed_transaction_count' => 2,
+                'voids' => [
+                    'transaction_count' => 1,
+                ],
+            ],
+        ],
+    ]);
+
+    $response = $this->actingAs($user, 'sanctum')
+        ->getJson("/api/shifts/{$shift->id}");
+
+    $response->assertOk()
+        ->assertJsonPath('data.shift.id', $shift->id)
+        ->assertJsonPath(
+            'data.shift.reading.reading_number',
+            $reading->reading_number
+        )
+        ->assertJsonPath(
+            'data.shift.reading.cash_transaction_count',
+            1
+        )
+        ->assertJsonPath(
+            'data.shift.reading.gcash_transaction_count',
+            1
+        )
+        ->assertJsonPath(
+            'data.shift.reading.void_transaction_count',
+            1
+        )
+        ->assertJsonPath(
+            'data.shift.reading.cash_variance',
+            '0.00'
+        );
+}
 }

@@ -763,6 +763,145 @@ export default function Index() {
                             </div>
                         </div>
 
+                        {/* Saved X-Reading */}
+                        {selectedShift.shift.reading && (
+                            <div>
+                                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                                    <h3 className="text-sm font-semibold text-gray-900">
+                                        Shift Closing X-Reading
+                                    </h3>
+
+                                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700">
+                                        Saved Reading
+                                    </span>
+                                </div>
+
+                                <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+                                    <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <p className="text-xs text-gray-500">
+                                                Reading Number
+                                            </p>
+                                            <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                {selectedShift.shift.reading.reading_number}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p className="text-xs text-gray-500">
+                                                Generated At
+                                            </p>
+                                            <p className="mt-1 text-sm font-medium text-gray-900">
+                                                {formatDateTime(
+                                                    selectedShift.shift.reading.generated_at
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                        <div className="rounded-lg border bg-white p-3">
+                                            <p className="text-xs text-gray-500">
+                                                Cash Sales
+                                            </p>
+                                            <p className="mt-1 text-lg font-semibold text-gray-900">
+                                                {formatCurrency(
+                                                    selectedShift.shift.reading.cash_sales_total
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {selectedShift.shift.reading.cash_transaction_count} transaction(s)
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border bg-white p-3">
+                                            <p className="text-xs text-gray-500">
+                                                GCash Sales
+                                            </p>
+                                            <p className="mt-1 text-lg font-semibold text-gray-900">
+                                                {formatCurrency(
+                                                    selectedShift.shift.reading.gcash_sales_total
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {selectedShift.shift.reading.gcash_transaction_count} transaction(s)
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border bg-white p-3">
+                                            <p className="text-xs text-gray-500">
+                                                Voided Transactions
+                                            </p>
+                                            <p className="mt-1 text-lg font-semibold text-red-600">
+                                                {formatCurrency(
+                                                    selectedShift.shift.reading.void_sales_total
+                                                )}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {selectedShift.shift.reading.void_transaction_count} transaction(s)
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 border-t border-indigo-100 pt-4">
+                                        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                            Cash Reconciliation Snapshot
+                                        </h4>
+
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                            <div>
+                                                <p className="text-xs text-gray-500">
+                                                    Opening Cash
+                                                </p>
+                                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                    {formatCurrency(
+                                                        selectedShift.shift.reading.opening_cash
+                                                    )}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs text-gray-500">
+                                                    Expected Cash
+                                                </p>
+                                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                    {formatCurrency(
+                                                        selectedShift.shift.reading.expected_cash
+                                                    )}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs text-gray-500">
+                                                    Actual Cash
+                                                </p>
+                                                <p className="mt-1 text-sm font-semibold text-gray-900">
+                                                    {formatCurrency(
+                                                        selectedShift.shift.reading.actual_cash
+                                                    )}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs text-gray-500">
+                                                    Cash Variance
+                                                </p>
+                                                <p
+                                                    className={`mt-1 text-sm font-semibold ${getVarianceClass(
+                                                        selectedShift.shift.reading.cash_variance
+                                                    )}`}
+                                                >
+                                                    {formatCurrency(
+                                                        selectedShift.shift.reading.cash_variance
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Cash Reconciliation */}
                         <div>
                             <h3 className="mb-3 text-sm font-semibold text-gray-900">

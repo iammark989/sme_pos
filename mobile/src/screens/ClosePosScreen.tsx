@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import { printShiftReading } from '../services/shiftReadingPrintService';
+
 import {
   ActivityIndicator,
   Alert,
@@ -117,28 +119,78 @@ export default function ClosePosScreen({
         closing_notes: closingNotes.trim() || undefined,
       });
 
-      Alert.alert(
-        'POS Closed Successfully',
-        `Actual cash: ${formatMoney(closedShift.actual_cash)}\n` +
-          `Expected cash: ${formatMoney(closedShift.expected_cash)}\n` +
-          `Variance: ${formatMoney(closedShift.cash_variance)}`,
-        [
-          {
-            text: 'OK',
-            onPress: onClosed,
-          },
-        ],
-      );
+      const reading = closedShift.reading;
+
+      if (!reading) {
+        Alert.alert(
+          'POS Closed Successfully',
+          'The shift was closed, but the server did not return the X-reading. You can retrieve the saved reading from the web admin.',
+          [{ text: 'OK', onPress: onClosed }],
+        );
+        return;
+      }
+
+      // The shift is already closed. Printing must never close it again.
+      const printResult = await printShiftReading(reading);
+
+      const readingDetails =
+        `Reading No.: ${reading.reading_number}\n` +
+        `Generated: ${new Date(reading.generated_at).toLocaleString()}\n\n` +
+        `Cash Sales (${reading.cash_transaction_count}): ` +
+        `${formatMoney(reading.cash_sales_total)}\n` +
+        `GCash Sales (${reading.gcash_transaction_count}): ` +
+        `${formatMoney(reading.gcash_sales_total)}\n` +
+        `Voided (${reading.void_transaction_count}): ` +
+        `${formatMoney(reading.void_sales_total)}\n\n` +
+        `Opening Cash: ${formatMoney(reading.opening_cash)}\n` +
+        `Expected Cash: ${formatMoney(reading.expected_cash)}\n` +
+        `Actual Cash: ${formatMoney(reading.actual_cash)}\n` +
+        `Variance: ${formatMoney(reading.cash_variance)}`;
+
+      if (printResult.success) {
+        Alert.alert(
+          'Shift Closed — X-Reading Printed',
+          `${readingDetails}\n\n${printResult.message}`,
+          [{ text: 'OK', onPress: onClosed }],
+        );
+      } else {
+        Alert.alert(
+          'Shift Closed — Printing Failed',
+          `${readingDetails}\n\n${printResult.message}`,
+          [
+            {
+              text: 'Retry Print',
+              onPress: () => {
+                void retryPrintShiftReading(reading);
+              },
+            },
+            {
+              text: 'Continue',
+              onPress: onClosed,
+            },
+          ],
+        );
+      }
     } catch (error) {
       Alert.alert(
         'Unable to Close POS',
-        error instanceof Error
-          ? error.message
-          : 'Please try again.',
+        error instanceof Error ? error.message : 'Please try again.',
       );
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const retryPrintShiftReading = async (
+    reading: NonNullable<Awaited<ReturnType<typeof closePosShift>>['reading']>,
+  ) => {
+    const result = await printShiftReading(reading);
+
+    Alert.alert(
+      result.success ? 'X-Reading Printed' : 'Printing Failed',
+      result.message,
+      [{ text: 'OK' }],
+    );
   };
 
   if (isLoading) {

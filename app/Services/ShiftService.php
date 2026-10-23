@@ -157,9 +157,12 @@ class ShiftService
                     'name' => $shift->warehouse()->value('name'),
                 ],
                 'cashier' => [
-                    'id' => $shift->user_id,
-                    'name' => $shift->user()->value('name'),
-                ],
+                        'id' => $shift->user_id,
+                        'name' => trim(implode(' ', array_filter([
+                            $shift->user()->value('first_name'),
+                            $shift->user()->value('last_name'),
+                        ]))) ?: $shift->user()->value('username'),
+                    ],
                 'opened_at' => $shift->opened_at->toISOString(),
                 'closed_at' => $closedAt->toISOString(),
                 'sales' => [
