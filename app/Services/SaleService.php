@@ -133,9 +133,8 @@ class SaleService
             * Lock and retrieve the branch's valid business day first.
             * This synchronizes sales with Z-Reading closure.
             */
-            $businessDay = $this->businessDayService->getOrOpenForBranch(
-                (int) $user->branch_id,
-                $user
+            $businessDay = $this->businessDayService->getOpenForBranch(
+                (int) $user->branch_id
             );
 
             $shift = Shift::query()

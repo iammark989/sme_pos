@@ -91,6 +91,86 @@ class BusinessDayService
         }, 3);
     }
 
+    
+    /**
+     * Explicitly open today's business day for a branch.
+     *
+     * This method must only be called by the business-day opening workflow.
+     */
+    public function openForBranch(
+        int $branchId,
+        User $user
+    ): BusinessDay {
+        return DB::transaction(function () use ($branchId, $user) {
+            $branch = Branch::query()
+                ->whereKey($branchId)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (!$branch->is_active) {
+                throw new RuntimeException(
+                    'The branch is inactive.'
+                );
+            }
+
+            if ($user->branch_id !== $branch->id) {
+                throw new RuntimeException(
+                    'The user does not belong to this branch.'
+                );
+            }
+
+            $today = now()->toDateString();
+
+            $openBusinessDay = BusinessDay::query()
+                ->where('branch_id', $branch->id)
+                ->where('status', 'open')
+                ->lockForUpdate()
+                ->first();
+
+            if ($openBusinessDay) {
+                throw new RuntimeException(
+                    'A business day is already open for this branch.'
+                );
+            }
+
+            $existingToday = BusinessDay::query()
+                ->where('branch_id', $branch->id)
+                ->whereDate('business_date', $today)
+                ->exists();
+
+            if ($existingToday) {
+                throw new RuntimeException(
+                    'A business-day record already exists for today. ' .
+                    'A closed business day cannot be reopened.'
+                );
+            }
+
+            $latestBusinessDay = BusinessDay::query()
+                ->where('branch_id', $branch->id)
+                ->orderByDesc('business_date')
+                ->first();
+
+            if (
+                $latestBusinessDay &&
+                $latestBusinessDay->business_date->toDateString() > $today
+            ) {
+                throw new RuntimeException(
+                    'A future business-day record already exists. ' .
+                    'Please review the branch business-day records.'
+                );
+            }
+
+            return BusinessDay::create([
+                'branch_id' => $branch->id,
+                'business_date' => $today,
+                'status' => 'open',
+                'opened_by' => $user->id,
+                'opened_at' => now(),
+            ]);
+        }, 3);
+    }
+
+
     /**
      * Retrieve the currently open business day without creating one.
      */

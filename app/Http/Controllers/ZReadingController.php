@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Models\BusinessDay;
 use App\Models\ZReading;
+use App\Services\BusinessDayService;
 use App\Services\ZReadingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ use RuntimeException;
 
 class ZReadingController extends Controller
 {
+    
     public function current(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -23,17 +25,58 @@ class ZReadingController extends Controller
             ], 403);
         }
 
+        $branchId = (int) $user->branch_id;
+
         $businessDay = BusinessDay::query()
             ->with('zReading')
-            ->where('branch_id', $user->branch_id)
+            ->where('branch_id', $branchId)
             ->where('status', 'open')
             ->latest('business_date')
             ->first();
 
+        $latestZReading = ZReading::query()
+            ->with(['businessDay', 'branch', 'generatedBy'])
+            ->where('branch_id', $branchId)
+            ->latest('z_counter')
+            ->first();
+
         return response()->json([
             'business_day' => $businessDay,
+            'latest_z_reading' => $latestZReading,
         ]);
     }
+
+    
+    public function open(
+        Request $request,
+        BusinessDayService $businessDayService
+    ): JsonResponse {
+        $user = $request->user();
+
+        if (!$user->branch_id) {
+            return response()->json([
+                'message' => 'Your account is not assigned to a branch.',
+            ], 403);
+        }
+
+        try {
+            $businessDay = $businessDayService->openForBranch(
+                (int) $user->branch_id,
+                $user
+            );
+
+            return response()->json([
+                'message' => 'Business day opened successfully.',
+                'business_day' => $businessDay,
+            ], 201);
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+    }
+
+
 
     public function close(Request $request, ZReadingService $zReadingService): JsonResponse
     {

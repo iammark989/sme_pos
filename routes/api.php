@@ -193,6 +193,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/business-days/current', [ZReadingController::class, 'current']);
 
+    Route::post('/business-days/open', [ZReadingController::class, 'open']);
+
     Route::post('/business-days/z-reading/close', [ZReadingController::class, 'close']);
 
     Route::get('/z-readings/{zReading}', [ZReadingController::class, 'show'])->whereNumber('zReading');

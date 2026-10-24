@@ -341,4 +341,99 @@ class ZReadingTest extends TestCase
             'status' => 'completed',
         ]);
     }
+
+    
+    public function test_staff_can_open_a_business_day_explicitly(): void
+    {
+        [$branch, $user] = $this->createBranchAndStaff(
+            'business-day-open-success'
+        );
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/business-days/open');
+
+        $response->assertCreated()
+            ->assertJsonPath(
+                'message',
+                'Business day opened successfully.'
+            )
+            ->assertJsonPath(
+                'business_day.branch_id',
+                $branch->id
+            )
+            ->assertJsonPath(
+                'business_day.status',
+                'open'
+            )
+            ->assertJsonPath(
+                    'business_day.business_date',
+                    now()->startOfDay()->toISOString()
+                );
+
+        $this->assertDatabaseCount('business_days', 1);
+        $this->assertDatabaseCount('z_readings', 0);
+        $this->assertDatabaseCount('shifts', 0);
+    }
+
+    public function test_business_day_cannot_be_opened_twice(): void
+    {
+        [$branch, $user] = $this->createBranchAndStaff(
+            'business-day-open-duplicate'
+        );
+
+        $firstResponse = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/business-days/open');
+
+        $firstResponse->assertCreated();
+
+        $secondResponse = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/business-days/open');
+
+        $secondResponse->assertUnprocessable()
+            ->assertJsonPath(
+                'message',
+                'A business day is already open for this branch.'
+            );
+
+        $this->assertDatabaseCount('business_days', 1);
+
+        $this->assertDatabaseHas('business_days', [
+            'branch_id' => $branch->id,
+            'business_date' => now()->startOfDay()->toDateTimeString(),
+            'status' => 'open',
+        ]);
+    }
+
+    public function test_business_day_cannot_open_while_a_previous_day_is_open(): void
+    {
+        [$branch, $user] = $this->createBranchAndStaff(
+            'business-day-open-previous'
+        );
+
+        BusinessDay::create([
+            'branch_id' => $branch->id,
+            'business_date' => now()->subDay()->toDateString(),
+            'status' => 'open',
+            'opened_by' => $user->id,
+            'opened_at' => now()->subDay(),
+        ]);
+
+        $response = $this->actingAs($user, 'sanctum')
+            ->postJson('/api/business-days/open');
+
+        $response->assertUnprocessable()
+            ->assertJsonPath(
+                'message',
+                'A business day is already open for this branch.'
+            );
+
+        $this->assertDatabaseCount('business_days', 1);
+
+        $this->assertDatabaseHas('business_days', [
+            'branch_id' => $branch->id,
+            'business_date' => now()->subDay()->startOfDay()->toDateTimeString(),
+            'status' => 'open',
+        ]);
+    }
+
 }

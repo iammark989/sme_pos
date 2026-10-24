@@ -4,6 +4,10 @@ import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout';
 export default function POS() {
     const [products, setProducts] = useState([]);
     const [shift, setShift] = useState(null);
+    const [businessDay, setBusinessDay] = useState(null);
+    const [latestZReading, setLatestZReading] = useState(null);
+    const [businessDayLoading, setBusinessDayLoading] = useState(true);
+
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -44,6 +48,37 @@ export default function POS() {
     const [openingNotes, setOpeningNotes] = useState('');
     const [openingShiftLoading, setOpeningShiftLoading] = useState(false);
     const [shiftLoading, setShiftLoading] = useState(true);
+
+    const loadBusinessDay = async () => {
+        try {
+            setBusinessDayLoading(true);
+
+            const response = await fetch('/api/business-days/current', {
+                credentials: 'include',
+                headers: {
+                    Accept: 'application/json',
+                },
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load business-day status.'
+                );
+            }
+
+            setBusinessDay(result.business_day ?? null);
+            setLatestZReading(result.latest_z_reading ?? null);
+
+            return result;
+        } catch (error) {
+            setError(error.message);
+            throw error;
+        } finally {
+            setBusinessDayLoading(false);
+        }
+    };
 
     const loadCurrentShift = async () => {
         try {
@@ -111,15 +146,20 @@ export default function POS() {
             setLoading(true);
             setError(null);
 
+            const businessDayResult = await loadBusinessDay();
+            const currentBusinessDay =
+                businessDayResult.business_day ?? null;
+
             const currentShift = await loadCurrentShift();
 
-            if (currentShift) {
+            if (currentBusinessDay && currentShift) {
                 await loadProducts();
             } else {
                 setProducts([]);
+                setShift(null);
             }
         } catch {
-            // Error state is already handled by the individual functions.
+            // Error state is handled by the individual functions.
         } finally {
             setLoading(false);
         }
@@ -441,90 +481,27 @@ export default function POS() {
         }
     };
 
+    const today = new Date().toLocaleDateString('en-CA');
+
+    const latestZBusinessDate =
+        latestZReading?.business_day?.business_date;
+
+    const isBusinessDayClosed =
+        !businessDay &&
+        latestZBusinessDate === today;
+
     return (
         <AuthenticatedLayout>
-            <div>
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            Point of Sale
-                        </h1>
-
-                        <p className="mt-1 text-sm text-gray-500">
-                            Select products to add them to the cart.
-                        </p>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        {shift ? (
-                                <>
-                                    <div className="rounded-xl bg-white px-4 py-3 shadow-sm">
-                                        <div className="flex items-center gap-2">
-                                            <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-
-                                            <p className="text-xs font-medium text-gray-500">
-                                                Active Shift
-                                            </p>
-                                        </div>
-
-                                        <p className="mt-1 font-semibold text-gray-900">
-                                            Shift #{shift.id}
-                                        </p>
-
-                                        <div className="mt-2 space-y-0.5 text-xs text-gray-500">
-                                            <p>
-                                                Branch:{' '}
-                                                <span className="font-medium text-gray-700">
-                                                    {shift.branch?.name || '—'}
-                                                </span>
-                                            </p>
-
-                                            <p>
-                                                Warehouse:{' '}
-                                                <span className="font-medium text-gray-700">
-                                                    {shift.warehouse?.name || '—'}
-                                                </span>
-                                            </p>
-
-                                            <p>
-                                                Opening Cash:{' '}
-                                                <span className="font-medium text-gray-700">
-                                                    ₱
-                                                    {Number(
-                                                        shift.opening_cash ?? 0
-                                                    ).toLocaleString('en-PH', {
-                                                        minimumFractionDigits: 2,
-                                                        maximumFractionDigits: 2,
-                                                    })}
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <a
-                                        href="/shift"
-                                        className="rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
-                                    >
-                                        Close Shift
-                                    </a>
-                                </>
-                            ) : (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setError(null);
-                                        setOpeningCash('');
-                                        setOpeningNotes('');
-                                        setShowOpenShift(true);
-                                    }}
-                                    className="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
-                                >
-                                    Open Shift
-                                </button>
-                            )}
-                    </div>
-                </div>
+            
+                {loading || shiftLoading || businessDayLoading ? (
+    <div className="mt-6 rounded-xl border border-gray-200 bg-white p-8 text-center">
+        <p className="text-sm text-gray-500">
+            Loading POS...
+        </p>
+    </div>
+) : (
+<div>
+                
 
                 {/* Error */}
                 {error && (
@@ -1275,33 +1252,130 @@ export default function POS() {
                 
 
                 {/* Main POS Area */}
-                {!loading && !shift ? (
-                    <div className="mt-6 rounded-xl border border-yellow-200 bg-yellow-50 p-8 text-center">
-                        <h2 className="text-xl font-bold text-gray-900">
-                            No Open Shift
-                        </h2>
+{!loading && !shift && isBusinessDayClosed ? (
+  
+    <div className="mt-6 flex min-h-[60vh] items-center justify-center">
+        <div className="w-full max-w-xl rounded-2xl border border-red-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                <span className="text-3xl">🔒</span>
+            </div>
 
-                        <p className="mt-2 text-sm text-gray-600">
-                            You must open a shift before you can start making sales.
-                        </p>
+            <h2 className="mt-4 text-2xl font-bold text-gray-900">
+                POS Closed
+            </h2>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setError(null);
-                                setOpeningCash('');
-                                setOpeningNotes('');
-                                setShowOpenShift(true);
-                            }}
-                            className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-semibold text-white transition hover:bg-green-700"
-                        >
-                            Open Shift
-                        </button>
-                    </div>
-                ) : !loading && shift && !error ? (
+            <p className="mt-2 text-sm text-gray-600">
+                The business day has been closed. Sales and new shifts
+                cannot be started for this business day.
+            </p>
+
+            <div className="mx-auto mt-6 max-w-md rounded-xl bg-gray-50 p-4 text-left">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Z-Reading Number
+                </p>
+                <p className="mt-1 font-bold text-gray-900">
+                    {latestZReading?.reading_number ?? '—'}
+                </p>
+
+                <p className="mt-4 text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Business Date
+                </p>
+                <p className="mt-1 font-semibold text-gray-900">
+                    {latestZBusinessDate ?? '—'}
+                </p>
+            </div>
+
+            <p className="mt-5 text-xs text-gray-500">
+                Sales are unavailable until the next business day is opened.
+            </p>
+        </div>
+    </div>
+) : !loading && shift ? (
                     <>
+
+                    {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            Point of Sale
+                        </h1>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Select products to add them to the cart.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        {shift ? (
+                                <>
+                                    <div className="rounded-xl bg-white px-4 py-3 shadow-sm">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
+
+                                            <p className="text-xs font-medium text-gray-500">
+                                                Active Shift
+                                            </p>
+                                        </div>
+
+                                        <p className="mt-1 font-semibold text-gray-900">
+                                            Shift #{shift.id}
+                                        </p>
+
+                                        <div className="mt-2 space-y-0.5 text-xs text-gray-500">
+                                            <p>
+                                                Branch:{' '}
+                                                <span className="font-medium text-gray-700">
+                                                    {shift.branch?.name || '—'}
+                                                </span>
+                                            </p>
+
+                                            <p>
+                                                Warehouse:{' '}
+                                                <span className="font-medium text-gray-700">
+                                                    {shift.warehouse?.name || '—'}
+                                                </span>
+                                            </p>
+
+                                            <p>
+                                                Opening Cash:{' '}
+                                                <span className="font-medium text-gray-700">
+                                                    ₱
+                                                    {Number(
+                                                        shift.opening_cash ?? 0
+                                                    ).toLocaleString('en-PH', {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2,
+                                                    })}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <a
+                                        href="/shift"
+                                        className="rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                    >
+                                        Close Shift
+                                    </a>
+                                </>
+                            ) : !isBusinessDayClosed ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setError(null);
+                                        setOpeningCash('');
+                                        setOpeningNotes('');
+                                        setShowOpenShift(true);
+                                    }}
+                                    className="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
+                                >
+                                    Open Shift
+                                </button>
+                            ) : null}
+                    </div>
+                </div>
                     <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        
+                    
                 
                         {/* Products */}
                         <div className="lg:col-span-2">
@@ -1916,7 +1990,7 @@ export default function POS() {
                     </div>
 
                      {/** Recent Transactions */}
-                <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
+                    <div className="mt-6 rounded-xl bg-white p-6 shadow-sm">
                                     <div className="mb-4 flex items-center justify-between">
                                         <div>
                                             <h2 className="text-lg font-semibold text-gray-900">
@@ -2091,9 +2165,40 @@ export default function POS() {
                                     )}
                                 </div>
                     </>
-                ) : null}
+                ) : !loading && !shift ? (
+   
+    <div className="mt-6 flex min-h-[60vh] items-center justify-center">
+        <div className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                <span className="text-3xl">🔐</span>
+            </div>
+
+            <h2 className="mt-4 text-2xl font-bold text-gray-900">
+                No Active Shift
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-600">
+                A shift must be open to start selling products.
+            </p>
+
+            <button
+                type="button"
+                onClick={() => {
+                    setError(null);
+                    setOpeningCash('');
+                    setOpeningNotes('');
+                    setShowOpenShift(true);
+                }}
+                className="mt-6 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
+            >
+                Open Shift
+            </button>
+        </div>
+    </div>
+) : null}
              
             </div>
+            )}
         </AuthenticatedLayout>
     );
 }

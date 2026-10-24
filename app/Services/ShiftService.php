@@ -72,9 +72,8 @@ class ShiftService
             // Ensure the branch has a valid open business day.
             // This blocks opening a shift if the previous business
             // day has not been closed with a Z-Reading.
-            $this->businessDayService->getOrOpenForBranch(
-                $branch->id,
-                $user
+           $this->businessDayService->getOpenForBranch(
+                $branch->id
             );
 
             return Shift::create([

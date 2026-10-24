@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import AuthenticatedLayout from '../../Layouts/AuthenticatedLayout';
 import { usePage } from '@inertiajs/react';
+import ZReadingPrint from '../../Components/ZReadingPrint';
 
 export default function Dashboard() {
     const { auth } = usePage().props;
@@ -19,16 +20,30 @@ export default function Dashboard() {
     const [closeError, setCloseError] = useState(null);
     const [savedZReading, setSavedZReading] = useState(null);
 
+    const [businessDayLoading, setBusinessDayLoading] = useState(true);
+    const [openBusinessDayLoading, setOpenBusinessDayLoading] = useState(false);
+    const [openBusinessDayError, setOpenBusinessDayError] = useState(null);
+    
+    const [showZReading, setShowZReading] = useState(false);
+
+    const [businessDayJustClosed, setBusinessDayJustClosed] = useState(false);
+
+    
     useEffect(() => {
         axios
             .get('/api/business-days/current')
             .then((response) => {
-                setBusinessDay(response.data.business_day);
+                setBusinessDay(response.data.business_day ?? null);
+                setSavedZReading(response.data.latest_z_reading ?? null);
             })
             .catch((error) => {
-                console.error('Failed to load current business day:', error);
+                console.error('Failed to load business-day information:', error);
+            })
+            .finally(() => {
+                setBusinessDayLoading(false);
             });
     }, []);
+
 
     useEffect(() => {
         axios
@@ -134,6 +149,51 @@ export default function Dashboard() {
             businessDate && businessDate < today
         );
 
+        
+        const latestReadingDate = savedZReading?.business_date
+            ? String(savedZReading.business_date).slice(0, 10)
+            : null;
+
+        const businessDayClosedToday = Boolean(
+            businessDayJustClosed || latestReadingDate === today
+        );
+
+        const canOpenBusinessDay = Boolean(
+            isStaff &&
+            dashboard &&
+            !businessDayLoading &&
+            !businessDay &&
+            !businessDayClosedToday
+        );
+
+        const handleOpenBusinessDay = async () => {
+            if (!canOpenBusinessDay || openBusinessDayLoading) {
+                return;
+            }
+
+            setOpenBusinessDayLoading(true);
+            setOpenBusinessDayError(null);
+
+            try {
+                const response = await axios.post('/api/business-days/open');
+
+                setBusinessDay(response.data.business_day ?? null);
+                setOpenBusinessDayError(null);
+
+                // Refresh dashboard data after opening the business day.
+                const dashboardResponse = await axios.get('/api/dashboard');
+                setDashboard(dashboardResponse.data.data);
+            } catch (error) {
+                setOpenBusinessDayError(
+                    error.response?.data?.message ||
+                        'Failed to open the business day. Please try again.'
+                );
+            } finally {
+                setOpenBusinessDayLoading(false);
+            }
+        };
+
+
         const canCloseBusinessDay = Boolean(
             isStaff &&
             dashboard &&
@@ -165,6 +225,7 @@ export default function Dashboard() {
                 );
 
                 setSavedZReading(response.data.z_reading);
+                setBusinessDayJustClosed(true);
                 setBusinessDay(null);
                 setShowCloseModal(false);
                 setConfirmedClose(false);
@@ -213,6 +274,24 @@ export default function Dashboard() {
                         )}
                     </div>
 
+                    
+                    {/* Open Business Day */}
+                    {canOpenBusinessDay && (
+                        <div className="shrink-0 sm:ml-6">
+                            <button
+                                type="button"
+                                onClick={handleOpenBusinessDay}
+                                disabled={openBusinessDayLoading}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                            >
+                                {openBusinessDayLoading
+                                    ? 'Opening business day...'
+                                    : 'Open Business Day'}
+                            </button>
+                        </div>
+                    )}
+
+
                     {/* Close Business Day */}
                     {canCloseBusinessDay && (
                         <div className="shrink-0 sm:ml-6">
@@ -224,7 +303,7 @@ export default function Dashboard() {
                                     setRecoveryReason('');
                                     setShowCloseModal(true);
                                 }}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
+                                className="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:w-auto"
                             >
                                 <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -248,10 +327,23 @@ export default function Dashboard() {
                     )}
                 </div>
 
+                
+                {openBusinessDayError && (
+                    <div
+                        role="alert"
+                        className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+                    >
+                        {openBusinessDayError}
+                    </div>
+                )}
+
+
                 {savedZReading && (
                     <div className="mt-6 rounded-xl border border-green-200 bg-green-50 p-5">
                         <h2 className="font-semibold text-green-900">
-                            Business day closed successfully
+                            {businessDayJustClosed
+                                ? 'Business day closed successfully'
+                                : 'Latest saved Z-Reading'}
                         </h2>
 
                         <p className="mt-2 text-sm text-green-800">
@@ -265,6 +357,29 @@ export default function Dashboard() {
                         <p className="mt-1 text-sm text-green-800">
                             Generated: {formatDateTime(savedZReading.generated_at)}
                         </p>
+
+                        <div className="mt-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowZReading(true)}
+                                className="inline-flex items-center rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800"
+                            >
+                                View / Print Z-Reading
+                            </button>
+                        </div>
+                    </div>
+                )}
+                
+                {!savedZReading && !businessDayJustClosed && (
+                    <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+                        <h2 className="font-semibold text-gray-900">
+                            Latest Z-Reading
+                        </h2>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            No Z-Reading has been generated for this branch yet.
+                        </p>
+                        
                     </div>
                 )}
 
@@ -452,10 +567,17 @@ export default function Dashboard() {
                                     </div>
                                 )}
                             </div>
+
                         </div>
                     </>
                 )}
 
+                {showZReading && savedZReading && (
+                    <ZReadingPrint
+                        reading={savedZReading}
+                        onClose={() => setShowZReading(false)}
+                    />
+                )}
 
                 {showCloseModal && (
                         <div
