@@ -15,7 +15,8 @@ use RuntimeException;
 class SaleService
 {
     public function __construct(
-        protected InventoryService $inventoryService
+        protected InventoryService $inventoryService,
+        protected BusinessDayService $businessDayService,
     ) {
     }
 
@@ -28,7 +29,9 @@ class SaleService
         ?string $paymentReference = null
     ): array {
         if (empty($items)) {
-            throw new RuntimeException('Sale must contain at least one item.');
+            throw new RuntimeException(
+                'Sale must contain at least one item.'
+            );
         }
 
         return DB::transaction(function () use (
@@ -40,7 +43,6 @@ class SaleService
             $paymentReference
         ) {
             $subtotal = 0;
-
             $saleItems = [];
 
             foreach ($items as $item) {
@@ -67,7 +69,6 @@ class SaleService
                 }
 
                 $unitPrice = (float) $product->selling_price;
-
                 $itemSubtotal = $unitPrice * $quantity;
 
                 $subtotal += $itemSubtotal;
@@ -86,7 +87,7 @@ class SaleService
 
             $paymentMethod = strtolower($paymentMethod);
 
-            if (!in_array($paymentMethod, ['cash', 'gcash'])) {
+            if (!in_array($paymentMethod, ['cash', 'gcash'], true)) {
                 throw new RuntimeException(
                     'Invalid payment method.'
                 );
@@ -128,36 +129,49 @@ class SaleService
                 );
             }
 
+             /*
+            * Lock and retrieve the branch's valid business day first.
+            * This synchronizes sales with Z-Reading closure.
+            */
+            $businessDay = $this->businessDayService->getOrOpenForBranch(
+                (int) $user->branch_id,
+                $user
+            );
+
             $shift = Shift::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'open')
-            ->latest('opened_at')
-            ->lockForUpdate()
-            ->first();
+                ->where('user_id', $user->id)
+                ->where('status', 'open')
+                ->latest('opened_at')
+                ->lockForUpdate()
+                ->first();
 
-        if (!$shift) {
-            throw new RuntimeException(
-                'You must have an open shift before creating a sale.'
-            );
-        }
+            if (!$shift) {
+                throw new RuntimeException(
+                    'You must have an open shift before creating a sale.'
+                );
+            }
 
-        if ($shift->branch_id !== $user->branch_id) {
-            throw new RuntimeException(
-                'The active shift does not belong to the user branch.'
-            );
-        }
+            if ($shift->branch_id !== $user->branch_id) {
+                throw new RuntimeException(
+                    'The active shift does not belong to the user branch.'
+                );
+            }
 
-        if ($shift->warehouse_id !== $warehouse->id) {
-            throw new RuntimeException(
-                'The active shift does not belong to the selected warehouse.'
-            );
-        }
+            if ($shift->warehouse_id !== $warehouse->id) {
+                throw new RuntimeException(
+                    'The active shift does not belong to the selected warehouse.'
+                );
+            }
 
+                    /*
+             * Create the sale with both its shift and business day.
+             */
             $sale = Sale::create([
                 'branch_id' => $user->branch_id,
                 'warehouse_id' => $warehouse->id,
                 'user_id' => $user->id,
                 'shift_id' => $shift->id,
+                'business_day_id' => $businessDay->id,
                 'sale_number' => $this->generateSaleNumber(),
                 'status' => 'completed',
                 'subtotal' => $subtotal,
@@ -203,6 +217,7 @@ class SaleService
                     'branch',
                     'user',
                     'shift',
+                    'businessDay',
                 ]),
                 'change_amount' => round($changeAmount, 2),
             ];
@@ -211,6 +226,7 @@ class SaleService
 
     private function generateSaleNumber(): string
     {
-        return 'SALE-' . now()->format('YmdHis') . '-' . random_int(1000, 9999);
+        return 'SALE-' . now()->format('YmdHis') . '-' .
+            random_int(1000, 9999);
     }
 }

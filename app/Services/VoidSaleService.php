@@ -2,8 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\BusinessDay;
 use App\Models\Sale;
 use App\Models\User;
+use App\Models\Branch;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
@@ -50,11 +52,47 @@ class VoidSaleService
             $user,
             $reason
         ) {
+            /*
+            * Lock the branch first, matching the Z-Reading close order.
+            */
+            $branch = Branch::query()
+                ->whereKey($sale->branch_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            /*
+            * Retrieve the business day associated with the sale.
+            */
+            $businessDayId = Sale::query()
+                ->whereKey($sale->id)
+                ->value('business_day_id');
+
+            if ($businessDayId !== null) {
+                $businessDay = BusinessDay::query()
+                    ->whereKey($businessDayId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ((int) $businessDay->branch_id !== (int) $branch->id) {
+                    throw new RuntimeException(
+                        'The transaction business day does not match its branch.'
+                    );
+                }
+
+                if ($businessDay->status !== 'open') {
+                    throw new RuntimeException(
+                        'This transaction belongs to a closed business day. ' .
+                        'It cannot be voided through the normal void process.'
+                    );
+                }
+            }
+
             $sale = Sale::query()
                 ->with([
                     'items.product.recipes',
                     'payments',
                     'shift',
+                    'businessDay',
                 ])
                 ->lockForUpdate()
                 ->findOrFail($sale->id);
@@ -103,17 +141,13 @@ class VoidSaleService
                 }
             }
 
-            /*
-             * Reverse inventory deductions created by the sale.
-             */
+            // Reverse inventory deductions created by the sale.
             $this->inventoryService->reverseSale(
                 $sale,
                 'Sale voided: ' . $reason
             );
 
-            /*
-             * Reverse the cash effect of the original sale.
-             */
+            // Reverse the cash effect of the original sale.
             if ($payment->method === 'cash') {
                 $shift->decrement(
                     'expected_cash',
@@ -121,9 +155,7 @@ class VoidSaleService
                 );
             }
 
-            /*
-             * Mark the original sale as voided.
-             */
+            // Mark the original sale as voided.
             $sale->update([
                 'status' => 'voided',
                 'voided_at' => now(),
@@ -139,7 +171,8 @@ class VoidSaleService
                 'user',
                 'voidedBy',
                 'shift',
+                'businessDay',
             ]);
-        });
+        }, 3);
     }
 }

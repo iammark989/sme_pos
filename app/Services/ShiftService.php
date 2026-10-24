@@ -13,6 +13,12 @@ use RuntimeException;
 
 class ShiftService
 {
+
+    public function __construct(
+        protected BusinessDayService $businessDayService,
+    ) {
+    }
+
     public function openShift(
         User $user,
         Branch $branch,
@@ -62,6 +68,14 @@ class ShiftService
                     'The user already has an open shift.'
                 );
             }
+
+            // Ensure the branch has a valid open business day.
+            // This blocks opening a shift if the previous business
+            // day has not been closed with a Z-Reading.
+            $this->businessDayService->getOrOpenForBranch(
+                $branch->id,
+                $user
+            );
 
             return Shift::create([
                 'branch_id' => $branch->id,

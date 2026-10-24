@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\BusinessDay;
 use App\Models\Payment;
 use App\Models\SaleItem;
 use App\Models\Shift;
@@ -27,6 +28,7 @@ class Sale extends Model
         'subtotal',
         'discount_amount',
         'total_amount',
+        'business_day_id',
     ];
 
     protected function casts(): array
@@ -72,6 +74,11 @@ class Sale extends Model
     public function shift(): BelongsTo
     {
         return $this->belongsTo(Shift::class);
+    }
+
+    public function businessDay(): BelongsTo
+    {
+        return $this->belongsTo(BusinessDay::class);
     }
 
 }

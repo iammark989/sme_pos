@@ -30,6 +30,7 @@ use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VoidTransactionController;
 use App\Http\Controllers\WarehouseManagementController;
 use App\Http\Controllers\WarehouseQueryController;
+use App\Http\Controllers\ZReadingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -189,5 +190,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/warehouse-management/{warehouse}', [WarehouseManagementController::class, 'update'])->whereNumber('warehouse');
 
     Route::patch('/warehouse-management/{warehouse}/status', [WarehouseManagementController::class, 'updateStatus'])->whereNumber('warehouse');
+
+    Route::get('/business-days/current', [ZReadingController::class, 'current']);
+
+    Route::post('/business-days/z-reading/close', [ZReadingController::class, 'close']);
+
+    Route::get('/z-readings/{zReading}', [ZReadingController::class, 'show'])->whereNumber('zReading');
 
 });
