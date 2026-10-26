@@ -7,6 +7,7 @@ export default function POS() {
     const [businessDay, setBusinessDay] = useState(null);
     const [latestZReading, setLatestZReading] = useState(null);
     const [businessDayLoading, setBusinessDayLoading] = useState(true);
+    const [businessDayRequired, setBusinessDayRequired] = useState(false);
 
     const [cart, setCart] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -204,7 +205,18 @@ export default function POS() {
 
             await initializePOS();
         } catch (error) {
-            setError(error.message);
+            const message = error.message || 'Failed to open shift.';
+
+            if (message.toLowerCase().includes('business day')) {
+                setShowOpenShift(false);
+                setOpeningCash('');
+                setOpeningNotes('');
+                setError(null);
+                setBusinessDay(null);
+                setBusinessDayRequired(true);
+            } else {
+                setError(message);
+            }
         } finally {
             setOpeningShiftLoading(false);
         }
@@ -490,6 +502,16 @@ export default function POS() {
         !businessDay &&
         latestZBusinessDate === today;
 
+    const businessDate = businessDay?.business_date
+        ? String(businessDay.business_date).slice(0, 10)
+        : null;
+
+    const isOverdueBusinessDay = Boolean(
+        businessDay?.status === 'open' &&
+        businessDate &&
+        businessDate < today
+    );
+
     return (
         <AuthenticatedLayout>
             
@@ -713,7 +735,7 @@ export default function POS() {
                                     type="button"
                                     onClick={() => setShowOpenShift(false)}
                                     disabled={openingShiftLoading}
-                                    className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    className="cursor-pointer rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
@@ -725,7 +747,7 @@ export default function POS() {
                                         openingShiftLoading ||
                                         openingCash === ''
                                     }
-                                    className="rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                    className="cursor-pointer rounded-lg bg-green-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-300"
                                 >
                                     {openingShiftLoading
                                         ? 'Opening...'
@@ -1290,7 +1312,80 @@ export default function POS() {
             </p>
         </div>
     </div>
-) : !loading && shift ? (
+    ) : !loading && isOverdueBusinessDay ? (
+        <div className="mt-6 flex min-h-[60vh] items-center justify-center">
+            <div className="w-full max-w-xl rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        className="h-8 w-8 text-amber-600"
+                        aria-hidden="true"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 9v3m0 4h.01M10.3 3.9 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3l-7.5-13.1a2 2 0 0 0-3.4 0Z"
+                        />
+                    </svg>
+                </div>
+
+                <h2 className="mt-4 text-2xl font-bold text-gray-900">
+                    Previous Business Day Not Closed
+                </h2>
+
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                    The business day below is still open. It must be closed
+                    and its Z-Reading generated before a new business day
+                    can be opened.
+                </p>
+
+                <div className="mx-auto mt-6 max-w-md rounded-xl border border-amber-100 bg-amber-50 p-4 text-left">
+                    <p className="text-xs font-medium uppercase tracking-wide text-amber-800">
+                        Business Date Requiring Closure
+                    </p>
+
+                    <p className="mt-2 text-lg font-bold text-gray-900">
+                        {new Date(`${businessDate}T00:00:00`).toLocaleDateString(
+                            'en-US',
+                            {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                            }
+                        )}
+                    </p>
+
+                    <p className="mt-2 text-sm text-gray-600">
+                        {shift
+                            ? 'An active cashier shift still needs to be closed first.'
+                            : 'Once all cashier shifts are closed, Staff can generate the Z-Reading from the Dashboard.'}
+                    </p>
+                </div>
+
+                <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                    {shift ? (
+                        <a
+                            href="/shift"
+                            className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+                        >
+                            Go to Close Shift
+                        </a>
+                    ) : (
+                        <a
+                            href="/dashboard"
+                            className="inline-flex items-center justify-center rounded-lg bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+                        >
+                            Go to Dashboard to Close Business Day
+                        </a>
+                    )}
+                </div>
+            </div>
+        </div>
+    ) : !loading && shift ? (
                     <>
 
                     {/* Header */}
@@ -1353,7 +1448,7 @@ export default function POS() {
 
                                     <a
                                         href="/shift"
-                                        className="rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
+                                        className="cursor-pointer rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-700"
                                     >
                                         Close Shift
                                     </a>
@@ -1367,7 +1462,7 @@ export default function POS() {
                                         setOpeningNotes('');
                                         setShowOpenShift(true);
                                     }}
-                                    className="rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
+                                    className="cursor-pointer rounded-lg bg-green-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
                                 >
                                     Open Shift
                                 </button>
@@ -2165,37 +2260,70 @@ export default function POS() {
                                     )}
                                 </div>
                     </>
-                ) : !loading && !shift ? (
-   
+                ) : !loading && !shift && (!businessDay || businessDayRequired) ? (
     <div className="mt-6 flex min-h-[60vh] items-center justify-center">
-        <div className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
-                <span className="text-3xl">🔐</span>
+        <div className="w-full max-w-xl rounded-2xl border border-amber-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                <span className="text-3xl">📅</span>
             </div>
 
             <h2 className="mt-4 text-2xl font-bold text-gray-900">
-                No Active Shift
+                Business Day Not Open
             </h2>
 
-            <p className="mt-2 text-sm text-gray-600">
-                A shift must be open to start selling products.
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+                A business day must be opened for this branch before
+                you can start a cashier shift or process sales.
             </p>
 
-            <button
-                type="button"
-                onClick={() => {
-                    setError(null);
-                    setOpeningCash('');
-                    setOpeningNotes('');
-                    setShowOpenShift(true);
-                }}
-                className="mt-6 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
-            >
-                Open Shift
-            </button>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+                <a
+                    href="/dashboard"
+                    className="rounded-lg bg-green-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-800"
+                >
+                    Open Business Day on Dashboard
+                </a>
+
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="cursor-pointer rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                >
+                    Refresh POS
+                </button>
+            </div>
         </div>
     </div>
-) : null}
+    ) : !loading && !shift ? (
+        <div className="mt-6 flex min-h-[60vh] items-center justify-center">
+            <div className="w-full max-w-xl rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                    <span className="text-3xl">🔐</span>
+                </div>
+
+                <h2 className="mt-4 text-2xl font-bold text-gray-900">
+                    No Active Shift
+                </h2>
+
+                <p className="mt-2 text-sm text-gray-600">
+                    A shift must be open to start selling products.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        setError(null);
+                        setOpeningCash('');
+                        setOpeningNotes('');
+                        setShowOpenShift(true);
+                    }}
+                    className="cursor-pointer mt-6 rounded-lg bg-green-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
+                >
+                    Open Shift
+                </button>
+            </div>
+        </div>
+    ) : null}
              
             </div>
             )}

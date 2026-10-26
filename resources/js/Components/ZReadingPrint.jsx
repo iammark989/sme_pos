@@ -46,7 +46,7 @@ export default function ZReadingPrint({ reading, onClose }) {
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
+                        className="cursor-pointer rounded-lg border px-3 py-2 text-sm hover:bg-gray-50"
                     >
                         Close
                     </button>
@@ -221,7 +221,7 @@ export default function ZReadingPrint({ reading, onClose }) {
                     <button
                         type="button"
                         onClick={() => window.print()}
-                        className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
+                        className="cursor-pointer rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"
                     >
                         Print / Reprint
                     </button>

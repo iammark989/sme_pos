@@ -26,8 +26,9 @@ export default function Dashboard() {
     
     const [showZReading, setShowZReading] = useState(false);
 
-    const [businessDayJustClosed, setBusinessDayJustClosed] = useState(false);
+    const [showBusinessDayOpenedModal, setShowBusinessDayOpenedModal] = useState(false);
 
+    const [businessDayJustClosed, setBusinessDayJustClosed] = useState(false);
     
     useEffect(() => {
         axios
@@ -177,12 +178,15 @@ export default function Dashboard() {
             try {
                 const response = await axios.post('/api/business-days/open');
 
-                setBusinessDay(response.data.business_day ?? null);
+                const openedBusinessDay = response.data.business_day ?? null;
+
+                setBusinessDay(openedBusinessDay);
                 setOpenBusinessDayError(null);
 
                 // Refresh dashboard data after opening the business day.
                 const dashboardResponse = await axios.get('/api/dashboard');
                 setDashboard(dashboardResponse.data.data);
+                setShowBusinessDayOpenedModal(true);
             } catch (error) {
                 setOpenBusinessDayError(
                     error.response?.data?.message ||
@@ -282,7 +286,7 @@ export default function Dashboard() {
                                 type="button"
                                 onClick={handleOpenBusinessDay}
                                 disabled={openBusinessDayLoading}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                                className="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                             >
                                 {openBusinessDayLoading
                                     ? 'Opening business day...'
@@ -362,7 +366,7 @@ export default function Dashboard() {
                             <button
                                 type="button"
                                 onClick={() => setShowZReading(true)}
-                                className="inline-flex items-center rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800"
+                                className="cursor-pointer inline-flex items-center rounded-lg bg-green-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-800"
                             >
                                 View / Print Z-Reading
                             </button>
@@ -579,6 +583,97 @@ export default function Dashboard() {
                     />
                 )}
 
+                {showBusinessDayOpenedModal && businessDay && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="business-day-opened-title"
+                    >
+                        <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                            <div className="flex flex-col items-center text-center">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        className="h-9 w-9 text-green-600"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="m5 12 4 4L19 6"
+                                        />
+                                    </svg>
+                                </div>
+
+                                <h2
+                                    id="business-day-opened-title"
+                                    className="mt-4 text-xl font-bold text-gray-900"
+                                >
+                                    Business Day Opened Successfully
+                                </h2>
+
+                                <p className="mt-2 text-sm text-gray-600">
+                                    Business day{' '}
+                                    <span className="font-semibold text-gray-900">
+                                        {new Date(
+                                            `${String(businessDay.business_date).slice(0, 10)}T00:00:00`
+                                        ).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                        })}
+                                    </span>{' '}
+                                    is now open.
+                                </p>
+
+                                <p className="mt-2 text-sm text-gray-500">
+                                    You can now open a cashier shift and start processing sales.
+                                </p>
+                            </div>
+
+                            <div className="mt-6 flex flex-col gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBusinessDayOpenedModal(false)}
+                                    className="cursor-pointer w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
+                                >
+                                    Continue to Dashboard
+                                </button>
+
+                                <a
+                                    href="/pos"
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        className="h-5 w-5"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M3 3h2l2.2 11.1a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 2-1.6L21 7H6"
+                                        />
+                                        <circle cx="10" cy="20" r="1" />
+                                        <circle cx="18" cy="20" r="1" />
+                                    </svg>
+                                    Go to POS
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+
                 {showCloseModal && (
                         <div
                             className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -676,7 +771,7 @@ export default function Dashboard() {
                                             setShowCloseModal(false);
                                             setCloseError(null);
                                         }}
-                                        className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                        className="cursor-pointer rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                                     >
                                         Cancel
                                     </button>
@@ -689,7 +784,7 @@ export default function Dashboard() {
                                             (isRecoveryClose && !recoveryReason.trim())
                                         }
                                         onClick={handleCloseBusinessDay}
-                                        className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="cursor-pointer rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         {closeLoading ? 'Closing business day...' : 'Confirm close'}
                                     </button>

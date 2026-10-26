@@ -545,7 +545,7 @@ export default function CurrentShift() {
                                             submitting ||
                                             actualCash === ''
                                         }
-                                        className="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="cursor-pointer rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         {submitting
                                             ? 'Closing Shift...'
@@ -642,7 +642,7 @@ export default function CurrentShift() {
                         </div>
                         <div className="flex flex-wrap justify-end gap-3 border-t px-6 py-4">
                             {printReading && (
-                                <button type="button" onClick={() => window.print()} className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                                <button type="button" onClick={() => window.print()} className="cursor-pointer rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
                                     Print X-Reading Again
                                 </button>
                             )}
@@ -652,7 +652,7 @@ export default function CurrentShift() {
                                     setShowZReading(false);
                                     window.location.href = '/pos';
                                 }}
-                                className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                className="cursor-pointer rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
                             >
                                 Done — Return to POS
                             </button>
