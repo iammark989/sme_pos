@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\InventoryStock;
 use App\Models\Sale;
 use App\Models\Shift;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class DashboardController extends Controller
 {
@@ -25,6 +27,47 @@ class DashboardController extends Controller
             ], 403);
         }
 
+        /*
+         * ---------------------------------------------------------
+         * Resolve dashboard branch
+         * ---------------------------------------------------------
+         */
+        if ($user->hasGlobalAccess()) {
+            $validated = $request->validate([
+                'branch_id' => [
+                    'nullable',
+                    'integer',
+                    Rule::exists('branches', 'id')
+                        ->where('is_active', true),
+                ],
+            ]);
+
+            $branchId = isset($validated['branch_id'])
+                ? (int) $validated['branch_id']
+                : (int) Branch::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->orderBy('id')
+                    ->value('id');
+
+            if (!$branchId) {
+                return response()->json([
+                    'message' => 'No active branches are available.',
+                ], 422);
+            }
+        } else {
+            if (!$user->branch_id) {
+                return response()->json([
+                    'message' => 'Your account is not assigned to a branch.',
+                ], 403);
+            }
+
+            // Branch-scoped users cannot select another branch.
+            $branchId = (int) $user->branch_id;
+        }
+
+        $branch = Branch::query()->find($branchId);
+
         $today = now()->toDateString();
 
         /*
@@ -33,11 +76,8 @@ class DashboardController extends Controller
          * ---------------------------------------------------------
          */
         $salesQuery = Sale::query()
+            ->where('branch_id', $branchId)
             ->whereDate('created_at', $today);
-
-        if (!$user->hasGlobalAccess()) {
-            $salesQuery->where('branch_id', $user->branch_id);
-        }
 
         $completedSalesQuery = (clone $salesQuery)
             ->where('status', 'completed');
@@ -75,24 +115,16 @@ class DashboardController extends Controller
                 'warehouse.branch',
             ])
             ->whereHas('inventoryItem', function ($query) {
-                $query->where('is_active', true);
-            })
-            ->whereHas('warehouse', function ($query) use ($user) {
                 $query->where('is_active', true)
-                    ->where(function ($query) use ($user) {
-                        if ($user->hasGlobalAccess()) {
-                            return;
-                        }
-
-                        $query->where('branch_id', $user->branch_id);
-                    });
+                    ->whereColumn(
+                        'inventory_stocks.quantity',
+                        '<=',
+                        'inventory_items.reorder_level'
+                    );
             })
-            ->whereHas('inventoryItem', function ($query) {
-                $query->whereColumn(
-                    'inventory_stocks.quantity',
-                    '<=',
-                    'inventory_items.reorder_level'
-                );
+            ->whereHas('warehouse', function ($query) use ($branchId) {
+                $query->where('is_active', true)
+                    ->where('branch_id', $branchId);
             });
 
         $lowStockCount = (clone $lowStockQuery)->count();
@@ -122,12 +154,11 @@ class DashboardController extends Controller
          * ---------------------------------------------------------
          */
         $openShiftsQuery = Shift::query()
+            ->where('branch_id', $branchId)
             ->where('status', 'open');
 
         if ($user->role?->name === 'Staff') {
             $openShiftsQuery->where('user_id', $user->id);
-        } elseif (!$user->hasGlobalAccess()) {
-            $openShiftsQuery->where('branch_id', $user->branch_id);
         }
 
         $openShifts = $openShiftsQuery->count();
@@ -142,11 +173,8 @@ class DashboardController extends Controller
                 'payments',
                 'user',
                 'branch',
-            ]);
-
-        if (!$user->hasGlobalAccess()) {
-            $recentTransactionsQuery->where('branch_id', $user->branch_id);
-        }
+            ])
+            ->where('branch_id', $branchId);
 
         if ($user->role?->name === 'Staff') {
             $recentTransactionsQuery->where('user_id', $user->id);
@@ -181,6 +209,8 @@ class DashboardController extends Controller
         return response()->json([
             'data' => [
                 'date' => $today,
+                'branch_id' => $branchId,
+                'branch_name' => $branch?->name,
                 'today_sales' => round((float) $todaySales, 2),
                 'transaction_count' => $transactionCount,
                 'cash_sales' => round((float) $cashSales, 2),

@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react';
 export default function ReportsIndex() {
     const today = new Date().toISOString().split('T')[0];
     const [activeTab, setActiveTab] = useState('range');
+
+    const [dailySalesDate, setDailySalesDate] = useState(today);
+    const [dailySalesReport, setDailySalesReport] = useState(null);
+    const [loadingDailySales, setLoadingDailySales] = useState(false);
+    const [dailySalesError, setDailySalesError] = useState('');
+
     const [branches, setBranches] = useState([]);
     const [branchId, setBranchId] = useState('');
 
@@ -261,6 +267,53 @@ export default function ReportsIndex() {
             setLoadingInventory(false);
         }
     };
+
+    
+    const loadDailySalesReport = async () => {
+        try {
+            setLoadingDailySales(true);
+            setDailySalesError('');
+
+            if (!dailySalesDate) {
+                throw new Error('Please select a date for the daily sales report.');
+            }
+
+            const params = new URLSearchParams({
+                date: dailySalesDate,
+            });
+
+            if (branchId) {
+                params.append('branch_id', branchId);
+            }
+
+            const response = await fetch(
+                `/api/reports/sales/daily?${params.toString()}`,
+                {
+                    headers: {
+                        Accept: 'application/json',
+                    },
+                }
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || 'Failed to load daily sales report.'
+                );
+            }
+
+            setDailySalesReport(result.data);
+        } catch (err) {
+            setDailySalesError(
+                err.message || 'Failed to load daily sales report.'
+            );
+            setDailySalesReport(null);
+        } finally {
+            setLoadingDailySales(false);
+        }
+    };
+
 
     const handleInventoryViewChange = (view) => {
         setInventoryView(view);
@@ -962,7 +1015,8 @@ export default function ReportsIndex() {
 
                                 Daily Product Sales
 
-                            </button>                            <button
+                            </button>                            
+                            <button
                                 type="button"
                                 role="tab"
                                 id="inventory-reports-tab"
@@ -976,6 +1030,22 @@ export default function ReportsIndex() {
                                 }`}
                             >
                                 Inventory Reports
+                            </button>
+
+                            <button
+                                type="button"
+                                role="tab"
+                                id="daily-sales-tab"
+                                aria-selected={activeTab === 'daily-sales'}
+                                aria-controls="daily-sales-panel"
+                                onClick={() => setActiveTab('daily-sales')}
+                                className={`rounded-lg px-4 py-3 text-sm font-semibold transition ${
+                                    activeTab === 'daily-sales'
+                                        ? 'bg-blue-600 text-white shadow-sm'
+                                        : 'cursor-pointer text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                                }`}
+                            >
+                                Daily Sales Report
                             </button>
 
 
@@ -2083,6 +2153,272 @@ export default function ReportsIndex() {
                                     <p className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">Choose a report type, set any filters, and generate the inventory report.</p>
                                 )}
                             </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'daily-sales' && (
+                        <div id="daily-sales-panel" role="tabpanel" aria-labelledby="daily-sales-tab">
+                            <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                                <div className="mb-5">
+                                    <h2 className="text-lg font-semibold text-gray-900">
+                                        Daily Sales Report
+                                    </h2>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Review completed and voided transactions for a selected business day.
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                    <div>
+                                        <label htmlFor="daily_sales_date" className="mb-2 block text-sm font-medium text-gray-700">
+                                            Business Date
+                                        </label>
+                                        <input
+                                            id="daily_sales_date"
+                                            type="date"
+                                            value={dailySalesDate}
+                                            max={today}
+                                            onChange={(event) => {
+                                                setDailySalesDate(event.target.value);
+                                                setDailySalesReport(null);
+                                                setDailySalesError('');
+                                            }}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label htmlFor="daily_sales_branch_id" className="mb-2 block text-sm font-medium text-gray-700">
+                                            Branch
+                                        </label>
+                                        <select
+                                            id="daily_sales_branch_id"
+                                            value={branchId}
+                                            onChange={(event) => {
+                                                setBranchId(event.target.value);
+                                                setDailySalesReport(null);
+                                                setDailySalesError('');
+                                            }}
+                                            disabled={loadingBranches}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+                                        >
+                                            <option value="">All Branches</option>
+                                            {branches.map((branch) => (
+                                                <option key={branch.id} value={branch.id}>
+                                                    {branch.name} ({branch.code})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="flex items-end">
+                                        <button
+                                            type="button"
+                                            onClick={loadDailySalesReport}
+                                            disabled={loadingDailySales || !dailySalesDate || loadingBranches}
+                                            className="w-full cursor-pointer rounded-lg bg-blue-600 px-4 py-2 font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {loadingDailySales ? 'Loading...' : 'Generate Daily Report'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {dailySalesError && (
+                                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    {dailySalesError}
+                                </div>
+                            )}
+
+                            {loadingDailySales && (
+                                <div className="mb-6 rounded-xl bg-white px-6 py-8 text-center text-sm text-gray-500 shadow-sm">
+                                    Loading daily sales report...
+                                </div>
+                            )}
+
+                            {dailySalesReport && !loadingDailySales && (
+                                <>
+                                    <div className="mb-6 flex flex-col gap-4 rounded-xl bg-white px-6 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:gap-8">
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Business Date</p>
+                                                <p className="mt-1 text-sm font-semibold text-gray-900">{dailySalesReport.date}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Branch</p>
+                                                <p className="mt-1 text-sm font-semibold text-gray-900">{getBranchName()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Business Day ID</p>
+                                                <p className="mt-1 text-sm font-semibold text-gray-900">{dailySalesReport.business_day_id ?? '—'}</p>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const summary = dailySalesReport.summary ?? {};
+                                                const rows = [
+                                                    ['Summary', 'Value'],
+                                                    ['Business Date', dailySalesReport.date],
+                                                    ['Branch', getBranchName()],
+                                                    ['Completed Transactions', summary.transaction_count ?? 0],
+                                                    ['Gross Sales', Number(summary.gross_sales ?? 0).toFixed(2)],
+                                                    ['Discounts', Number(summary.discounts ?? 0).toFixed(2)],
+                                                    ['Net Sales', Number(summary.net_sales ?? 0).toFixed(2)],
+                                                    ['Cash Sales', Number(summary.cash_sales ?? 0).toFixed(2)],
+                                                    ['GCash Sales', Number(summary.gcash_sales ?? 0).toFixed(2)],
+                                                    ['Voided Transactions', summary.voided_transaction_count ?? 0],
+                                                    ['Voided Sales', Number(summary.voided_sales ?? 0).toFixed(2)],
+                                                    [],
+                                                    ['Completed Transactions'],
+                                                    ['Transaction Number', 'Time', 'Status', 'Payment Methods', 'Subtotal', 'Discount', 'Total'],
+                                                    ...(dailySalesReport.transactions ?? []).map((sale) => [
+                                                        sale.transaction_number ?? sale.id,
+                                                        sale.time ?? '',
+                                                        sale.status ?? '',
+                                                        (sale.payments ?? []).map((payment) => payment.method).filter(Boolean).join(', '),
+                                                        Number(sale.subtotal ?? 0).toFixed(2),
+                                                        Number(sale.discount_amount ?? 0).toFixed(2),
+                                                        Number(sale.total_amount ?? 0).toFixed(2),
+                                                    ]),
+                                                    [],
+                                                    ['Voided Transactions'],
+                                                    ['Transaction Number', 'Void Time', 'Status', 'Amount', 'Void Reason'],
+                                                    ...(dailySalesReport.voided_transactions ?? []).map((sale) => [
+                                                        sale.transaction_number ?? sale.id,
+                                                        sale.time ?? '',
+                                                        sale.status ?? '',
+                                                        Number(sale.total_amount ?? 0).toFixed(2),
+                                                        sale.void_reason ?? '',
+                                                    ]),
+                                                ];
+                                                downloadCsv(
+                                                    `daily-sales-report-${dailySalesReport.date}.csv`,
+                                                    rows[0],
+                                                    rows.slice(1)
+                                                );
+                                            }}
+                                            className="cursor-pointer rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700"
+                                        >
+                                            Export CSV
+                                        </button>
+                                    </div>
+
+                                    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        <SummaryCard title="Completed Transactions" value={Number(dailySalesReport.summary?.transaction_count ?? 0).toLocaleString('en-PH')} />
+                                        <SummaryCard title="Gross Sales" value={formatCurrency(dailySalesReport.summary?.gross_sales)} />
+                                        <SummaryCard title="Discounts" value={formatCurrency(dailySalesReport.summary?.discounts)} />
+                                        <SummaryCard title="Net Sales" value={formatCurrency(dailySalesReport.summary?.net_sales)} />
+                                        <SummaryCard title="Cash Sales" value={formatCurrency(dailySalesReport.summary?.cash_sales)} />
+                                        <SummaryCard title="GCash Sales" value={formatCurrency(dailySalesReport.summary?.gcash_sales)} />
+                                    </div>
+
+                                    <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                                        <div className="mb-5">
+                                            <h2 className="text-lg font-semibold text-gray-900">Completed Transactions</h2>
+                                            <p className="mt-1 text-sm text-gray-500">
+                                                Completed sales assigned to this business day. Payment method is based on recorded payment entries.
+                                            </p>
+                                        </div>
+
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        {['Transaction Number', 'Time', 'Payment Method', 'Subtotal', 'Discount', 'Total'].map((label) => (
+                                                            <th key={label} scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-200 bg-white">
+                                                    {(dailySalesReport.transactions ?? []).map((sale) => (
+                                                        <tr key={sale.id}>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{sale.transaction_number || `Sale #${sale.id}`}</td>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{sale.time || '—'}</td>
+                                                            <td className="px-4 py-3 text-sm text-gray-700">
+                                                                {(sale.payments ?? []).length
+                                                                    ? [...new Set(sale.payments.map((payment) => String(payment.method || '').toUpperCase()).filter(Boolean))].join(', ')
+                                                                    : '—'}
+                                                            </td>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(sale.subtotal)}</td>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{formatCurrency(sale.discount_amount)}</td>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCurrency(sale.total_amount)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                                <tfoot className="bg-gray-50">
+                                                    <tr>
+                                                        <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-gray-900">Total</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCurrency((dailySalesReport.transactions ?? []).reduce((sum, sale) => sum + Number(sale.subtotal ?? 0), 0))}</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCurrency((dailySalesReport.transactions ?? []).reduce((sum, sale) => sum + Number(sale.discount_amount ?? 0), 0))}</td>
+                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-bold text-gray-900">{formatCurrency((dailySalesReport.transactions ?? []).reduce((sum, sale) => sum + Number(sale.total_amount ?? 0), 0))}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+
+                                        {(!dailySalesReport.transactions || dailySalesReport.transactions.length === 0) && (
+                                            <p className="mt-4 rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                                No completed transactions found for this business day.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
+                                        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <h2 className="text-lg font-semibold text-gray-900">Voided Transactions</h2>
+                                                <p className="mt-1 text-sm text-gray-500">Voided sales are listed separately and are not included in completed sales totals.</p>
+                                            </div>
+                                            <div className="flex gap-4">
+                                                <div>
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Count</p>
+                                                    <p className="mt-1 text-lg font-bold text-gray-900">{Number(dailySalesReport.summary?.voided_transaction_count ?? 0).toLocaleString('en-PH')}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Voided Sales</p>
+                                                    <p className="mt-1 text-lg font-bold text-gray-900">{formatCurrency(dailySalesReport.summary?.voided_sales)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full divide-y divide-gray-200">
+                                                <thead className="bg-gray-50">
+                                                    <tr>
+                                                        {['Transaction Number', 'Void Time', 'Amount', 'Void Reason'].map((label) => (
+                                                            <th key={label} scope="col" className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+                                                        ))}
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-gray-200 bg-white">
+                                                    {(dailySalesReport.voided_transactions ?? []).map((sale) => (
+                                                        <tr key={sale.id}>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-sm font-medium text-gray-900">{sale.transaction_number || `Sale #${sale.id}`}</td>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{sale.time || '—'}</td>
+                                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-900">{formatCurrency(sale.total_amount)}</td>
+                                                            <td className="min-w-48 px-4 py-3 text-sm text-gray-700">{sale.void_reason || '—'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {(!dailySalesReport.voided_transactions || dailySalesReport.voided_transactions.length === 0) && (
+                                            <p className="mt-4 rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                                No voided transactions found for this business day.
+                                            </p>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+
+                            {!dailySalesReport && !loadingDailySales && !dailySalesError && (
+                                <p className="rounded-xl bg-white px-6 py-10 text-center text-sm text-gray-500 shadow-sm">
+                                    Select a business date and branch, then generate the daily sales report.
+                                </p>
+                            )}
                         </div>
                     )}
 

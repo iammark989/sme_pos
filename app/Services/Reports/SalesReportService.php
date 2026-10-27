@@ -7,40 +7,110 @@ use Illuminate\Support\Carbon;
 
 class SalesReportService
 {
+    
     public function daily(
         string $date,
         ?int $branchId = null
     ): array {
-        $sales = Sale::query()
-            ->whereDate('created_at', $date)
-            ->where('status', 'completed')
+        $businessDay = \App\Models\BusinessDay::query()
+            ->whereDate('business_date', $date)
             ->when($branchId !== null, function ($query) use ($branchId) {
                 $query->where('branch_id', $branchId);
-            });
+            })
+            ->first();
 
-        $transactionCount = (clone $sales)->count();
+        if (!$businessDay) {
+            return [
+                'date' => Carbon::parse($date)->toDateString(),
+                'branch_id' => $branchId,
+                'business_day_id' => null,
+                'summary' => [
+                    'transaction_count' => 0,
+                    'gross_sales' => 0,
+                    'discounts' => 0,
+                    'net_sales' => 0,
+                    'cash_sales' => 0,
+                    'gcash_sales' => 0,
+                    'voided_transaction_count' => 0,
+                    'voided_sales' => 0,
+                ],
+                'transactions' => [],
+                'voided_transactions' => [],
+            ];
+        }
 
-        $grossSales = (clone $sales)->sum('subtotal');
+        $sales = Sale::query()
+            ->where('business_day_id', $businessDay->id)
+            ->where('branch_id', $businessDay->branch_id);
 
-        $discounts = (clone $sales)->sum('discount_amount');
+        $completedSales = (clone $sales)
+            ->where('status', 'completed');
 
-        $netSales = (clone $sales)->sum('total_amount');
+        $voidedSalesQuery = (clone $sales)
+            ->where('status', 'voided');
 
-        $cashSales = (clone $sales)
+        $transactionCount = (clone $completedSales)->count();
+        $grossSales = (clone $completedSales)->sum('subtotal');
+        $discounts = (clone $completedSales)->sum('discount_amount');
+        $netSales = (clone $completedSales)->sum('total_amount');
+
+        $cashSales = (clone $completedSales)
             ->whereHas('payments', function ($query) {
                 $query->where('method', 'cash');
             })
             ->sum('total_amount');
 
-        $gcashSales = (clone $sales)
+        $gcashSales = (clone $completedSales)
             ->whereHas('payments', function ($query) {
                 $query->where('method', 'gcash');
             })
             ->sum('total_amount');
 
+        $transactions = (clone $completedSales)
+            ->with('payments')
+            ->orderBy('id')
+            ->get()
+            ->map(function ($sale) {
+                return [
+                    'id' => $sale->id,
+                    'transaction_number' => $sale->sale_number ?? null,
+                    'time' => $sale->created_at?->toDateTimeString(),
+                    'status' => $sale->status,
+                    'subtotal' => round((float) $sale->subtotal, 2),
+                    'discount_amount' => round((float) $sale->discount_amount, 2),
+                    'total_amount' => round((float) $sale->total_amount, 2),
+                    'payments' => $sale->payments->map(function ($payment) {
+                        return [
+                            'method' => $payment->method,
+                            'amount' => round((float) $payment->amount, 2),
+                        ];
+                    })->values()->all(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $voidedTransactions = (clone $voidedSalesQuery)
+            ->with('payments')
+            ->orderBy('id')
+            ->get()
+            ->map(function ($sale) {
+                return [
+                    'id' => $sale->id,
+                    'transaction_number' => $sale->sale_number ?? null,
+                    'time' => $sale->voided_at?->toDateTimeString(),
+                    'status' => $sale->status,
+                    'total_amount' => round((float) $sale->total_amount, 2),
+                    'void_reason' => $sale->void_reason ?? null,
+                ];
+            })
+            ->values()
+            ->all();
+
         return [
             'date' => Carbon::parse($date)->toDateString(),
-            'branch_id' => $branchId,
+            'branch_id' => $businessDay->branch_id,
+            'business_day_id' => $businessDay->id,
             'summary' => [
                 'transaction_count' => $transactionCount,
                 'gross_sales' => round((float) $grossSales, 2),
@@ -48,9 +118,17 @@ class SalesReportService
                 'net_sales' => round((float) $netSales, 2),
                 'cash_sales' => round((float) $cashSales, 2),
                 'gcash_sales' => round((float) $gcashSales, 2),
+                'voided_transaction_count' => count($voidedTransactions),
+                'voided_sales' => round(
+                    (float) (clone $voidedSalesQuery)->sum('total_amount'),
+                    2
+                ),
             ],
+            'transactions' => $transactions,
+            'voided_transactions' => $voidedTransactions,
         ];
     }
+
 
     public function dailyProducts(
         string $date,

@@ -7,6 +7,15 @@ import ZReadingPrint from '../../Components/ZReadingPrint';
 export default function Dashboard() {
     const { auth } = usePage().props;
     const user = auth.user;
+    const canSelectBranch =
+        user.role?.name === 'Owner' ||
+        (user.role?.name === 'Admin' && Boolean(user.is_global_admin));
+
+    const [branches, setBranches] = useState([]);
+    const [selectedBranchId, setSelectedBranchId] = useState(
+        canSelectBranch ? '' : String(user.branch_id ?? '')
+    );
+    const [branchesLoading, setBranchesLoading] = useState(canSelectBranch);
 
     const [dashboard, setDashboard] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -31,39 +40,122 @@ export default function Dashboard() {
     const [businessDayJustClosed, setBusinessDayJustClosed] = useState(false);
     
     useEffect(() => {
+        if (!canSelectBranch) {
+            return;
+        }
+
+        let cancelled = false;
+
         axios
-            .get('/api/business-days/current')
+            .get('/api/branches')
             .then((response) => {
-                setBusinessDay(response.data.business_day ?? null);
-                setSavedZReading(response.data.latest_z_reading ?? null);
+                if (cancelled) {
+                    return;
+                }
+
+                const availableBranches = response.data.data ?? [];
+                setBranches(availableBranches);
+
+                if (availableBranches.length > 0) {
+                    // BranchQueryController returns branches alphabetically.
+                    setSelectedBranchId((current) => {
+                        if (
+                            current &&
+                            availableBranches.some(
+                                (branch) => String(branch.id) === String(current)
+                            )
+                        ) {
+                            return String(current);
+                        }
+
+                        return String(availableBranches[0].id);
+                    });
+                } else {
+                    setError('No active branches are available.');
+                    setLoading(false);
+                    setBusinessDayLoading(false);
+                }
             })
-            .catch((error) => {
-                console.error('Failed to load business-day information:', error);
+            .catch((requestError) => {
+                if (cancelled) {
+                    return;
+                }
+
+                console.error('Failed to load branches:', requestError);
+                setError(
+                    requestError.response?.data?.message ||
+                        'Failed to load available branches.'
+                );
+                setLoading(false);
+                setBusinessDayLoading(false);
             })
             .finally(() => {
-                setBusinessDayLoading(false);
+                if (!cancelled) {
+                    setBranchesLoading(false);
+                }
             });
-    }, []);
 
+        return () => {
+            cancelled = true;
+        };
+    }, [canSelectBranch]);
 
     useEffect(() => {
-        axios
-            .get('/api/dashboard')
-            .then((response) => {
-                setDashboard(response.data.data);
+        if (canSelectBranch && !selectedBranchId) {
+            return;
+        }
+
+        let cancelled = false;
+        const requestConfig =
+            canSelectBranch && selectedBranchId
+                ? { params: { branch_id: selectedBranchId } }
+                : {};
+
+        setLoading(true);
+        setError(null);
+        setBusinessDayLoading(true);
+        setBusinessDay(null);
+        setSavedZReading(null);
+        setBusinessDayJustClosed(false);
+
+        Promise.all([
+            axios.get('/api/dashboard', requestConfig),
+            axios.get('/api/business-days/current', requestConfig),
+        ])
+            .then(([dashboardResponse, businessDayResponse]) => {
+                if (cancelled) {
+                    return;
+                }
+
+                setDashboard(dashboardResponse.data.data);
+                setBusinessDay(businessDayResponse.data.business_day ?? null);
+                setSavedZReading(
+                    businessDayResponse.data.latest_z_reading ?? null
+                );
             })
-            .catch((error) => {
-                console.error(error);
+            .catch((requestError) => {
+                if (cancelled) {
+                    return;
+                }
+
+                console.error('Failed to load dashboard information:', requestError);
 
                 setError(
-                    error.response?.data?.message ||
+                    requestError.response?.data?.message ||
                         'Failed to load dashboard data.'
                 );
             })
             .finally(() => {
-                setLoading(false);
+                if (!cancelled) {
+                    setLoading(false);
+                    setBusinessDayLoading(false);
+                }
             });
-    }, []);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [canSelectBranch, selectedBranchId]);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-PH', {
@@ -133,7 +225,10 @@ export default function Dashboard() {
         const openShifts = Number(dashboard?.open_shifts ?? 0);
 
         const businessDate = businessDay?.business_date
-            ? String(businessDay.business_date).slice(0, 10)
+            ? new Date(businessDay.business_date).toLocaleDateString(
+                'en-CA',
+                { timeZone: 'Asia/Manila' }
+            )
             : null;
 
         const today = (() => {
@@ -184,7 +279,12 @@ export default function Dashboard() {
                 setOpenBusinessDayError(null);
 
                 // Refresh dashboard data after opening the business day.
-                const dashboardResponse = await axios.get('/api/dashboard');
+                const dashboardResponse = await axios.get(
+                    '/api/dashboard',
+                    canSelectBranch && selectedBranchId
+                        ? { params: { branch_id: selectedBranchId } }
+                        : {}
+                );
                 setDashboard(dashboardResponse.data.data);
                 setShowBusinessDayOpenedModal(true);
             } catch (error) {
@@ -236,7 +336,12 @@ export default function Dashboard() {
                 setRecoveryReason('');
 
                 // Refresh dashboard totals after closing.
-                const dashboardResponse = await axios.get('/api/dashboard');
+                const dashboardResponse = await axios.get(
+                    '/api/dashboard',
+                    canSelectBranch && selectedBranchId
+                        ? { params: { branch_id: selectedBranchId } }
+                        : {}
+                );
 
                 setDashboard(dashboardResponse.data.data);
             } catch (error) {
@@ -271,10 +376,47 @@ export default function Dashboard() {
                             </span>
                         </p>
 
-                        {user.branch && (
-                            <p className="mt-1 text-sm text-gray-500">
-                                Branch: {user.branch.name}
-                            </p>
+                        {canSelectBranch ? (
+                            <div className="mt-4 max-w-sm">
+                                <label
+                                    htmlFor="dashboard-branch"
+                                    className="mb-1 block text-sm font-medium text-gray-700"
+                                >
+                                    Select branch
+                                </label>
+                                <select
+                                    id="dashboard-branch"
+                                    value={selectedBranchId}
+                                    onChange={(event) =>
+                                        setSelectedBranchId(event.target.value)
+                                    }
+                                    disabled={branchesLoading || branches.length === 0}
+                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-green-600 focus:outline-none focus:ring-1 focus:ring-green-600 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                >
+                                    {branchesLoading && (
+                                        <option value="">Loading branches...</option>
+                                    )}
+                                    {!branchesLoading && branches.length === 0 && (
+                                        <option value="">No active branches</option>
+                                    )}
+                                    {branches.map((branch) => (
+                                        <option key={branch.id} value={String(branch.id)}>
+                                            {branch.name} ({branch.code})
+                                        </option>
+                                    ))}
+                                </select>
+                                {dashboard?.branch_name && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Viewing: {dashboard.branch_name}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            user.branch && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Branch: {user.branch.name}
+                                </p>
+                            )
                         )}
                     </div>
 

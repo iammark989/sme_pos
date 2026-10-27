@@ -503,8 +503,11 @@ export default function POS() {
         latestZBusinessDate === today;
 
     const businessDate = businessDay?.business_date
-        ? String(businessDay.business_date).slice(0, 10)
-        : null;
+    ? new Date(businessDay.business_date).toLocaleDateString(
+          'en-CA',
+          { timeZone: 'Asia/Manila' }
+      )
+    : null;
 
     const isOverdueBusinessDay = Boolean(
         businessDay?.status === 'open' &&

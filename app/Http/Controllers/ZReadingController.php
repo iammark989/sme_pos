@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\Branch;
 use App\Models\BusinessDay;
 use App\Models\ZReading;
 use App\Services\BusinessDayService;
@@ -15,17 +16,49 @@ use RuntimeException;
 class ZReadingController extends Controller
 {
     
+    
     public function current(Request $request): JsonResponse
     {
         $user = $request->user();
 
-        if (! $user->branch_id) {
-            return response()->json([
-                'message' => 'Your account is not assigned to a branch.',
-            ], 403);
-        }
+        $validated = $request->validate([
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
 
-        $branchId = (int) $user->branch_id;
+        if ($user->hasGlobalAccess()) {
+            $branchId = isset($validated['branch_id'])
+                ? (int) $validated['branch_id']
+                : (int) Branch::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->orderBy('id')
+                    ->value('id');
+
+            if (! $branchId) {
+                return response()->json([
+                    'message' => 'No active branches are available.',
+                ], 422);
+            }
+
+            $branch = Branch::query()
+                ->where('id', $branchId)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $branch) {
+                return response()->json([
+                    'message' => 'The selected branch is unavailable or inactive.',
+                ], 422);
+            }
+        } else {
+            if (! $user->branch_id) {
+                return response()->json([
+                    'message' => 'Your account is not assigned to a branch.',
+                ], 403);
+            }
+
+            $branchId = (int) $user->branch_id;
+        }
 
         $businessDay = BusinessDay::query()
             ->with('zReading')
@@ -41,10 +74,12 @@ class ZReadingController extends Controller
             ->first();
 
         return response()->json([
+            'branch_id' => $branchId,
             'business_day' => $businessDay,
             'latest_z_reading' => $latestZReading,
         ]);
     }
+
 
     
     public function open(
