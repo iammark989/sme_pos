@@ -27,6 +27,8 @@ import OpenPosScreen from './OpenPosScreen';
 
 import { getCurrentShift } from '../services/posService';
 
+import BusinessDayScreen from './BusinessDayScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -53,6 +55,8 @@ export default function DashboardScreen({
 
   const [hasActiveShift, setHasActiveShift] = useState<boolean | null>(null);
   const [isShiftStatusLoading, setIsShiftStatusLoading] = useState(true);
+
+  const [isBusinessDayOpen, setIsBusinessDayOpen] = useState(false);
 
   const refreshShiftStatus = useCallback(async () => {
     try {
@@ -145,6 +149,14 @@ export default function DashboardScreen({
           setIsPosOpen(false);
           setIsOpenPosScreenOpen(true);
         }}
+      />
+    );
+  }
+
+    if (isBusinessDayOpen) {
+    return (
+      <BusinessDayScreen
+        onBack={() => setIsBusinessDayOpen(false)}
       />
     );
   }
@@ -265,6 +277,7 @@ export default function DashboardScreen({
                 </Text>
               </TouchableOpacity>
             )}
+            
 
             {!isShiftStatusLoading && hasActiveShift === false && (
               <TouchableOpacity
@@ -283,6 +296,22 @@ export default function DashboardScreen({
                 </Text>
               </TouchableOpacity>
             )}
+
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => setIsBusinessDayOpen(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.actionIconPurple}>
+                <Text style={styles.actionIconText}>Z-READ</Text>
+              </View>
+
+              <Text style={styles.actionTitle}>Business Day</Text>
+
+              <Text style={styles.actionDescription}>
+                Open or close the business day and view Z-Readings
+              </Text>
+            </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionCard}

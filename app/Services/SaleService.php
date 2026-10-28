@@ -200,7 +200,7 @@ class SaleService
             Payment::create([
                 'sale_id' => $sale->id,
                 'method' => $paymentMethod,
-                'amount' => $amountPaid,
+                'amount' => $totalAmount,
                 'reference_number' => $paymentReference,
             ]);
 

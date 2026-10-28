@@ -173,6 +173,10 @@ class BusinessDayService
 
     /**
      * Retrieve the currently open business day without creating one.
+     *
+     * An overdue business day remains valid while it is open.
+     * It must be closed through the Z-Reading recovery workflow
+     * before a new business day can be opened.
      */
     public function getOpenForBranch(int $branchId): BusinessDay
     {
@@ -184,16 +188,6 @@ class BusinessDayService
         if (!$businessDay) {
             throw new RuntimeException(
                 'There is no open business day for this branch.'
-            );
-        }
-
-        if (
-            $businessDay->business_date->toDateString()
-            !== now()->toDateString()
-        ) {
-            throw new RuntimeException(
-                'The previous business day is still open. ' .
-                'Complete its Z-Reading before continuing.'
             );
         }
 
