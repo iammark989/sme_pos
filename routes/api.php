@@ -199,4 +199,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/z-readings/{zReading}', [ZReadingController::class, 'show'])->whereNumber('zReading');
 
+    Route::get('/reports/z-reading/daily', [ZReadingController::class, 'history']);
+
+    Route::get('/reports/x-reading/daily', [SalesReportController::class, 'dailyXReadings']);
+
 });

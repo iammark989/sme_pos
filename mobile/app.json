@@ -25,7 +25,8 @@
     },
     "plugins": [
       "expo-secure-store",
-      "@ricka7x/expo-thermal-printer"
+      "@ricka7x/expo-thermal-printer",
+      "@react-native-community/datetimepicker"
     ]
   }
 }

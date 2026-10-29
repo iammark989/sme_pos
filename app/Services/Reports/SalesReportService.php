@@ -3,6 +3,8 @@
 namespace App\Services\Reports;
 
 use App\Models\Sale;
+use App\Models\BusinessDay;
+use App\Models\ShiftReading;
 use Illuminate\Support\Carbon;
 
 class SalesReportService
@@ -128,25 +130,39 @@ class SalesReportService
             'voided_transactions' => $voidedTransactions,
         ];
     }
-
-
+    
     public function dailyProducts(
         string $date,
         ?int $branchId = null
     ): array {
+        $businessDay = \App\Models\BusinessDay::query()
+            ->whereDate('business_date', $date)
+            ->when($branchId !== null, function ($query) use ($branchId) {
+                $query->where('branch_id', $branchId);
+            })
+            ->first();
+
+        if (!$businessDay) {
+            return [
+                'date' => Carbon::parse($date)->toDateString(),
+                'branch_id' => $branchId,
+                'business_day_id' => null,
+                'business_day_exists' => false,
+                'products' => [],
+            ];
+        }
+
         $items = \App\Models\SaleItem::query()
             ->selectRaw('
                 product_id,
                 SUM(quantity) as quantity_sold,
                 SUM(subtotal) as gross_sales
             ')
-            ->whereHas('sale', function ($query) use ($date, $branchId) {
+            ->whereHas('sale', function ($query) use ($businessDay) {
                 $query
-                    ->whereDate('created_at', $date)
-                    ->where('status', 'completed')
-                    ->when($branchId !== null, function ($query) use ($branchId) {
-                        $query->where('branch_id', $branchId);
-                    });
+                    ->where('business_day_id', $businessDay->id)
+                    ->where('branch_id', $businessDay->branch_id)
+                    ->where('status', 'completed');
             })
             ->with('product:id,name,sku')
             ->groupBy('product_id')
@@ -154,8 +170,10 @@ class SalesReportService
             ->get();
 
         return [
-            'date' => \Illuminate\Support\Carbon::parse($date)->toDateString(),
-            'branch_id' => $branchId,
+            'date' => Carbon::parse($date)->toDateString(),
+            'branch_id' => $businessDay->branch_id,
+            'business_day_id' => $businessDay->id,
+            'business_day_exists' => true,
             'products' => $items->map(function ($item) {
                 return [
                     'product_id' => $item->product_id,
@@ -167,6 +185,114 @@ class SalesReportService
             })->values()->all(),
         ];
     }
+
+    
+    public function dailyXReadings(
+        string $date,
+        int $branchId
+    ): array {
+        $businessDay = BusinessDay::query()
+            ->where('branch_id', $branchId)
+            ->whereDate('business_date', $date)
+            ->first();
+
+        if (!$businessDay) {
+            return [
+                'date' => Carbon::parse($date)->toDateString(),
+                'branch_id' => $branchId,
+                'business_day_exists' => false,
+                'message' => 'No business occure on selected date',
+                'x_readings' => [],
+            ];
+        }
+
+        $readings = ShiftReading::query()
+            ->with(['shift', 'user', 'warehouse'])
+            ->where('branch_id', $businessDay->branch_id)
+            ->whereDate('opened_at', $businessDay->business_date)
+            ->orderBy('opened_at')
+            ->get();
+
+        return [
+            'date' => $businessDay->business_date->toDateString(),
+            'branch_id' => $businessDay->branch_id,
+            'business_day_id' => $businessDay->id,
+            'business_day_exists' => true,
+            'message' => $readings->isEmpty()
+                ? 'No X-Readings available for this business day.'
+                : null,
+            'summary' => [
+                'shift_count' => $readings->count(),
+                'cash_transaction_count' => (int) $readings->sum(
+                    'cash_transaction_count'
+                ),
+                'cash_sales_total' => round(
+                    (float) $readings->sum('cash_sales_total'),
+                    2
+                ),
+                'gcash_transaction_count' => (int) $readings->sum(
+                    'gcash_transaction_count'
+                ),
+                'gcash_sales_total' => round(
+                    (float) $readings->sum('gcash_sales_total'),
+                    2
+                ),
+                'void_transaction_count' => (int) $readings->sum(
+                    'void_transaction_count'
+                ),
+                'void_sales_total' => round(
+                    (float) $readings->sum('void_sales_total'),
+                    2
+                ),
+                'opening_cash' => round(
+                    (float) $readings->sum('opening_cash'),
+                    2
+                ),
+                'expected_cash' => round(
+                    (float) $readings->sum('expected_cash'),
+                    2
+                ),
+                'actual_cash' => round(
+                    (float) $readings->sum('actual_cash'),
+                    2
+                ),
+                'cash_variance' => round(
+                    (float) $readings->sum('cash_variance'),
+                    2
+                ),
+            ],
+            'x_readings' => $readings->map(function ($reading) {
+                return [
+                    'id' => $reading->id,
+                    'reading_number' => $reading->reading_number,
+                    'shift_id' => $reading->shift_id,
+                    'user_id' => $reading->user_id,
+                    'cashier' => $reading->user
+                        ? trim(
+                            $reading->user->first_name . ' ' .
+                            $reading->user->last_name
+                        )
+                        : null,
+                    'warehouse_id' => $reading->warehouse_id,
+                    'warehouse' => $reading->warehouse?->name,
+                    'opened_at' => $reading->opened_at?->toDateTimeString(),
+                    'closed_at' => $reading->closed_at?->toDateTimeString(),
+                    'cash_transaction_count' => (int) $reading->cash_transaction_count,
+                    'cash_sales_total' => (float) $reading->cash_sales_total,
+                    'gcash_transaction_count' => (int) $reading->gcash_transaction_count,
+                    'gcash_sales_total' => (float) $reading->gcash_sales_total,
+                    'void_transaction_count' => (int) $reading->void_transaction_count,
+                    'void_sales_total' => (float) $reading->void_sales_total,
+                    'opening_cash' => (float) $reading->opening_cash,
+                    'expected_cash' => (float) $reading->expected_cash,
+                    'actual_cash' => (float) $reading->actual_cash,
+                    'cash_variance' => (float) $reading->cash_variance,
+                ];
+            })->values()->all(),
+        ];
+    }
+
+
 
     public function range(
         string $dateFrom,

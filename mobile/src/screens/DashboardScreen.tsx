@@ -29,6 +29,8 @@ import { getCurrentShift } from '../services/posService';
 
 import BusinessDayScreen from './BusinessDayScreen';
 
+import ReportsScreen from './ReportsScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -40,6 +42,9 @@ export default function DashboardScreen({
 }: DashboardScreenProps) {
   const userRole = user.role?.name ?? 'User';
   const userBranch = user.branch?.name ?? 'Not assigned';
+
+  const isStaff = userRole === 'Staff';
+  const isAdminOrOwner = ['Admin', 'Owner'].includes(userRole);
 
   const [isPrinterSetupOpen, setIsPrinterSetupOpen] = useState(false);
 
@@ -57,6 +62,8 @@ export default function DashboardScreen({
   const [isShiftStatusLoading, setIsShiftStatusLoading] = useState(true);
 
   const [isBusinessDayOpen, setIsBusinessDayOpen] = useState(false);
+
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
 
   const refreshShiftStatus = useCallback(async () => {
     try {
@@ -161,6 +168,15 @@ export default function DashboardScreen({
     );
   }
 
+    if (isReportsOpen) {
+    return (
+      <ReportsScreen
+        user={user}
+        onBack={() => setIsReportsOpen(false)}
+      />
+    );
+  }
+
   return (
     <ScrollView
       contentContainerStyle={styles.dashboardScroll}
@@ -230,6 +246,7 @@ export default function DashboardScreen({
         <Text style={styles.sectionHeading}>Quick Access</Text>
 
         <View style={styles.actionGrid}>
+          {isStaff && (
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => {
@@ -245,6 +262,7 @@ export default function DashboardScreen({
               Create a new sale
             </Text>
           </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.actionCard}
@@ -260,7 +278,7 @@ export default function DashboardScreen({
             </Text>
           </TouchableOpacity>
 
-          {!isShiftStatusLoading && hasActiveShift === true && (
+          {isStaff && !isShiftStatusLoading && hasActiveShift === true && (
               <TouchableOpacity
                 style={styles.actionCard}
                 onPress={() => setIsClosePosOpen(true)}
@@ -279,7 +297,7 @@ export default function DashboardScreen({
             )}
             
 
-            {!isShiftStatusLoading && hasActiveShift === false && (
+            {isStaff && !isShiftStatusLoading && hasActiveShift === false && (
               <TouchableOpacity
                 style={styles.actionCard}
                 onPress={() => setIsOpenPosScreenOpen(true)}
@@ -297,6 +315,7 @@ export default function DashboardScreen({
               </TouchableOpacity>
             )}
 
+            {isStaff && (
             <TouchableOpacity
               style={styles.actionCard}
               onPress={() => setIsBusinessDayOpen(true)}
@@ -312,7 +331,27 @@ export default function DashboardScreen({
                 Open or close the business day and view Z-Readings
               </Text>
             </TouchableOpacity>
+            )}
 
+            {isAdminOrOwner && (
+              <TouchableOpacity
+                style={styles.actionCard}
+                onPress={() => setIsReportsOpen(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.actionIconBlue}>
+                  <Text style={styles.actionIconText}>REPORT</Text>
+                </View>
+
+                <Text style={styles.actionTitle}>Reports</Text>
+
+                <Text style={styles.actionDescription}>
+                  Review store performance and business summaries
+                </Text>
+              </TouchableOpacity>
+            )}
+
+          {isAdminOrOwner && (
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => openFeature('Inventory')}
@@ -326,7 +365,9 @@ export default function DashboardScreen({
               Check stock levels
             </Text>
           </TouchableOpacity>
+          )}
 
+          {isAdminOrOwner && (
           <TouchableOpacity
             style={styles.actionCard}
             onPress={() => openFeature('Account')}
@@ -340,6 +381,7 @@ export default function DashboardScreen({
               View account details
             </Text>
           </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={styles.actionCard}
@@ -359,8 +401,37 @@ export default function DashboardScreen({
         </View>
 
         {/* Dashboard footer */}
-        <Text style={styles.dashboardFooter}>
-          SME POS · Store Management System
+              <Text style={styles.dashboardFooter}>
+                SME POS · Store Management System
+              </Text>
+            </View>
+
+            <View style={styles.webManagementCard}>
+        <View style={styles.webManagementHeader}>
+          <View style={styles.webManagementIcon}>
+            <Text style={styles.actionIconText}>WEB</Text>
+          </View>
+
+          <View style={styles.webManagementHeadingContainer}>
+            <Text style={styles.webManagementTitle}>
+              More Store Management Tools
+            </Text>
+
+            <Text style={styles.webManagementSubtitle}>
+              Complete management experience on the web
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.webManagementDescription}>
+          For product management, stock transfers, stock receiving,
+          inventory movements, and store settings, use the SME POS
+          web application in your browser.
+        </Text>
+
+        <Text style={styles.webManagementNote}>
+          The mobile app is designed for convenient daily operations.
+          The web app provides access to more store management functions.
         </Text>
       </View>
     </ScrollView>
@@ -551,5 +622,52 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     textAlign: 'center',
     marginTop: 28,
+  },
+
+  webManagementCard: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D8E3EF',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 20,
+  },
+  webManagementHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  webManagementIcon: {
+    width: 46,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webManagementHeadingContainer: {
+    flex: 1,
+  },
+  webManagementTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#102A43',
+  },
+  webManagementSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 3,
+  },
+  webManagementDescription: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#374151',
+    marginTop: 14,
+  },
+  webManagementNote: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#6B7280',
+    marginTop: 10,
   },
 });

@@ -218,5 +218,43 @@ class SalesReportController extends Controller
         );
     }
 
+    
+    public function dailyXReadings(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+            return response()->json([
+                'message' => 'You are not allowed to access X-Reading reports.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
+        ]);
+
+        $branchId = $this->resolveBranchId(
+            $request,
+            $validated['branch_id'] ?? null
+        );
+
+        if (!$branchId) {
+            return response()->json([
+                'message' => 'Please select a branch.',
+            ], 422);
+        }
+
+        $report = $this->salesReportService->dailyXReadings(
+            $validated['date'],
+            (int) $branchId
+        );
+
+        return response()->json([
+            'data' => $report,
+        ]);
+    }
+
+
 
 }
