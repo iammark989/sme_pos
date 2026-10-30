@@ -128,14 +128,12 @@ export default function StocksScreen({
           low_stock: activeFilter === 'low',
         };
 
+        // Global users can filter inventory by their selected branch.
+        // Branch-level users are automatically scoped by the backend.
         if (canSelectAnyBranch) {
-          filters.warehouse_id = undefined;
+          filters.branch_id = selectedBranchId;
         }
 
-        // The stock endpoint scopes branch-level users on the backend.
-        // For global users, branch filtering is handled by selected warehouse
-        // only when a warehouse filter is available. We keep the current
-        // API unchanged and display the selected branch in the UI.
         const result = await getStocks(filters);
 
         setStocks(result.data);
@@ -190,7 +188,7 @@ export default function StocksScreen({
   }
 
   function getUnit(stock: Stock): string {
-    const uom = stock.inventoryItem?.uom;
+    const uom = stock.inventory_item?.uom;
 
     return uom?.abbreviation || uom?.symbol || uom?.name || 'units';
   }
@@ -368,7 +366,7 @@ export default function StocksScreen({
         </View>
       ) : (
         stocks.map((stock) => {
-          const item = stock.inventoryItem;
+          const item = stock.inventory_item;
           const warehouse = stock.warehouse;
 
           return (

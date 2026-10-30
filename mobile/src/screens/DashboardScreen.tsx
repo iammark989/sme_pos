@@ -31,6 +31,10 @@ import BusinessDayScreen from './BusinessDayScreen';
 
 import ReportsScreen from './ReportsScreen';
 
+import StocksScreen from './StocksScreen';
+
+import InventoryTransactionsScreen from './InventoryTransactionsScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -64,6 +68,17 @@ export default function DashboardScreen({
   const [isBusinessDayOpen, setIsBusinessDayOpen] = useState(false);
 
   const [isReportsOpen, setIsReportsOpen] = useState(false);
+
+  const [isStocksOpen, setIsStocksOpen] = useState(false);
+
+  const canViewInventoryTransactions = [
+    'Owner',
+    'Admin',
+    'Accounting',
+  ].includes(userRole);
+
+  const [isInventoryTransactionsOpen, setIsInventoryTransactionsOpen] =
+  useState(false);
 
   const refreshShiftStatus = useCallback(async () => {
     try {
@@ -173,6 +188,24 @@ export default function DashboardScreen({
       <ReportsScreen
         user={user}
         onBack={() => setIsReportsOpen(false)}
+      />
+    );
+  }
+
+   if (isStocksOpen) {
+    return (
+      <StocksScreen
+        user={user}
+        onBack={() => setIsStocksOpen(false)}
+      />
+    );
+  }
+
+  if (isInventoryTransactionsOpen) {
+    return (
+      <InventoryTransactionsScreen
+        user={user}
+        onBack={() => setIsInventoryTransactionsOpen(false)}
       />
     );
   }
@@ -351,10 +384,10 @@ export default function DashboardScreen({
               </TouchableOpacity>
             )}
 
-          {isAdminOrOwner && (
+          
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => openFeature('Inventory')}
+            onPress={() => setIsStocksOpen(true)}
             activeOpacity={0.8}
           >
             <View style={styles.actionIconPurple}>
@@ -365,7 +398,25 @@ export default function DashboardScreen({
               Check stock levels
             </Text>
           </TouchableOpacity>
+
+          {canViewInventoryTransactions && (
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => setIsInventoryTransactionsOpen(true)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.actionIconBlue}>
+                <Text style={styles.actionIconText}>MOVEMENT</Text>
+              </View>
+
+              <Text style={styles.actionTitle}>Inventory Transactions</Text>
+
+              <Text style={styles.actionDescription}>
+                View inventory movement history
+              </Text>
+            </TouchableOpacity>
           )}
+          
 
           {isAdminOrOwner && (
           <TouchableOpacity

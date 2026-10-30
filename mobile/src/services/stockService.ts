@@ -29,12 +29,13 @@ export interface Stock {
   inventory_item_id: number;
   quantity: string | number;
   is_low_stock: boolean;
-  inventoryItem: StockInventoryItem;
+  inventory_item: StockInventoryItem;
   warehouse: StockWarehouse;
 }
 
 export interface StockFilters {
   search?: string;
+  branch_id?: number;
   warehouse_id?: number;
   low_stock?: boolean;
   page?: number;
@@ -66,6 +67,10 @@ export async function getStocks(
 
   if (filters.search?.trim()) {
     query.set('search', filters.search.trim());
+  }
+
+  if (filters.branch_id !== undefined) {
+    query.set('branch_id', String(filters.branch_id));
   }
 
   if (filters.warehouse_id !== undefined) {
