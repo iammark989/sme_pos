@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\InventoryTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,6 +37,18 @@ class InventoryTransactionQueryController extends Controller
                         $query->where('branch_id', $user->branch_id);
                     });
             });
+
+        /*
+        |--------------------------------------------------------------------------
+        | Branch Filter (Global Access Only)
+        |--------------------------------------------------------------------------
+        */
+
+        if ($user->hasGlobalAccess() && $request->filled('branch_id')) {
+            $query->whereHas('warehouse', function ($query) use ($request) {
+                $query->where('branch_id', $request->integer('branch_id'));
+            });
+        }
 
         /*
         |--------------------------------------------------------------------------
@@ -145,6 +158,106 @@ class InventoryTransactionQueryController extends Controller
             ")
             ->first();
 
+       /*
+        |--------------------------------------------------------------------------
+        | Fetch and Group Transaction Movements
+        |--------------------------------------------------------------------------
+        */
+
+        $transactions = $query
+            ->latest('id')
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Group Movements into Transaction Documents
+        |--------------------------------------------------------------------------
+        */
+
+        $groupedTransactions = $transactions
+            ->groupBy(function ($transaction) {
+                return match ($transaction->type) {
+                    'stock_in' => $transaction->reference_type && $transaction->reference_id
+                        ? 'stock_in_' . $transaction->reference_type . '_' . $transaction->reference_id
+                        : 'stock_in_' . $transaction->id,
+
+                    'transfer_in', 'transfer_out' => $transaction->transfer_reference
+                        ? 'transfer_' . $transaction->transfer_reference
+                        : 'transfer_' . $transaction->id,
+
+                    'sale', 'sale_reversal' => $transaction->reference_type && $transaction->reference_id
+                        ? $transaction->type . '_' . $transaction->reference_type . '_' . $transaction->reference_id
+                        : $transaction->type . '_' . $transaction->id,
+
+                    'adjustment' => 'adjustment_' . $transaction->id,
+
+                    default => 'transaction_' . $transaction->id,
+                };
+            })
+            ->map(function ($movements) use ($user) {
+                $first = $movements->first();
+
+                $items = $movements->map(function ($transaction) use ($user) {
+                    $relatedWarehouse = $transaction->relatedWarehouse();
+
+                    if (
+                        $relatedWarehouse
+                        && $relatedWarehouse->is_active
+                        && (
+                            $user->hasGlobalAccess()
+                            || (
+                                $user->branch_id !== null
+                                && (int) $relatedWarehouse->branch_id === (int) $user->branch_id
+                            )
+                        )
+                    ) {
+                        $transaction->related_warehouse = $relatedWarehouse;
+                    } else {
+                        $transaction->related_warehouse = null;
+                    }
+
+                    $transaction->transaction_category = match ($transaction->type) {
+                        'stock_in' => 'Stock In',
+                        'sale' => 'Sale',
+                        'sale_reversal' => 'Sale Reversal',
+                        'adjustment' => 'Adjustment',
+                        'transfer_out', 'transfer_in' => 'Stock Transfer',
+                        default => 'Other',
+                    };
+
+                    return $transaction;
+                });
+
+                $reference = match (true) {
+                    !empty($first->transfer_reference) => $first->transfer_reference,
+
+                    !empty($first->reference_type) && !empty($first->reference_id) =>
+                        class_basename($first->reference_type) . ' #' . $first->reference_id,
+
+                    $first->type === 'adjustment' =>
+                        'Adjustment #' . $first->id,
+
+                    default => 'Transaction #' . $first->id,
+                };
+
+                return [
+                    'id' => $first->id,
+                    'transaction_category' => match ($first->type) {
+                        'stock_in' => 'Stock In',
+                        'sale' => 'Sale',
+                        'sale_reversal' => 'Sale Reversal',
+                        'adjustment' => 'Stock Adjustment',
+                        'transfer_in', 'transfer_out' => 'Stock Transfer',
+                        default => 'Other',
+                    },
+                    'reference' => $reference,
+                    'date' => $movements->max('created_at'),
+                    'item_count' => $items->count(),
+                    'items' => $items->values(),
+                ];
+            })
+            ->values();
+
         /*
         |--------------------------------------------------------------------------
         | Pagination
@@ -156,51 +269,22 @@ class InventoryTransactionQueryController extends Controller
             100
         );
 
-        $transactions = $query
-            ->latest('id')
-            ->paginate($perPage);
+        $page = LengthAwarePaginator::resolveCurrentPage();
 
-         /*
-        |--------------------------------------------------------------------------
-        | Transaction Category and Related Warehouse Access
-        |--------------------------------------------------------------------------
-        */
+        $paginatedTransactions = new LengthAwarePaginator(
+            $groupedTransactions->forPage($page, $perPage)->values(),
+            $groupedTransactions->count(),
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
-        $transactions->getCollection()->transform(function ($transaction) use ($user) {
-            $transaction->transaction_category = match ($transaction->type) {
-                'stock_in' => 'Stock In',
-                'sale' => 'Sale',
-                'sale_reversal' => 'Sale Reversal',
-                'adjustment' => 'Adjustment',
-                'transfer_out', 'transfer_in' => 'Transfer',
-                default => 'Other',
-            };
-
-            $relatedWarehouse = $transaction->relatedWarehouse();
-
-            // Only expose related warehouses the current user may access.
-            if (
-                $relatedWarehouse
-                && $relatedWarehouse->is_active
-                && (
-                    $user->hasGlobalAccess()
-                    || (
-                        $user->branch_id !== null
-                        && (int) $relatedWarehouse->branch_id === (int) $user->branch_id
-                    )
-                )
-            ) {
-                $transaction->related_warehouse = $relatedWarehouse;
-            } else {
-                $transaction->related_warehouse = null;
-            }
-
-            return $transaction;
-        });
-         
         return response()->json([
             'summary' => $summary,
-            'data' => $transactions,
+            'data' => $paginatedTransactions,
         ]);
     }
 
@@ -228,6 +312,7 @@ class InventoryTransactionQueryController extends Controller
                 'date_format:Y-m-d',
                 'after_or_equal:date_from',
             ],
+            'branch_id' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $query = InventoryTransaction::query()
@@ -245,6 +330,17 @@ class InventoryTransactionQueryController extends Controller
                         $query->where('branch_id', $user->branch_id);
                     });
             });
+
+            /*
+            |--------------------------------------------------------------------------
+            | Branch Filter (Global Access Only)
+            |--------------------------------------------------------------------------
+            */
+            if ($user->hasGlobalAccess() && !empty($validated['branch_id'])) {
+                $query->whereHas('warehouse', function ($query) use ($validated) {
+                    $query->where('branch_id', $validated['branch_id']);
+                });
+            }
 
         if (!empty($validated['search'])) {
             $search = trim($validated['search']);

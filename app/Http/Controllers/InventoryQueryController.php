@@ -14,7 +14,7 @@ class InventoryQueryController extends Controller
     {
         $user = $request->user();
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting'], true)) {
+        if (!in_array($user->role?->name, ['Owner', 'Admin', 'Accounting', 'Staff'], true)) {
             return response()->json([
                 'message' => 'You are not authorized to view inventory stocks.',
             ], 403);
@@ -36,6 +36,18 @@ class InventoryQueryController extends Controller
                         $query->where('branch_id', $user->branch_id);
                     });
             });
+
+               /*
+        |--------------------------------------------------------------------------
+        | Branch filter (Global Access Only)
+        |--------------------------------------------------------------------------
+        */
+        if ($user->hasGlobalAccess() && $request->filled('branch_id')) {
+            $query->whereHas('warehouse', function ($query) use ($request) {
+                $query->where('branch_id', $request->integer('branch_id'));
+            });
+        }
+
 
         /*
         |--------------------------------------------------------------------------
