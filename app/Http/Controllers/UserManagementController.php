@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 
 class UserManagementController extends Controller
 {
+   
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -21,15 +22,35 @@ class UserManagementController extends Controller
             ], 403);
         }
 
-        $users = User::query()
+        $query = User::query()
             ->with([
                 'role',
                 'branch',
-            ])
-            ->when(
-                !$user->hasGlobalAccess(),
-                fn ($query) => $query->where('branch_id', $user->branch_id)
-            )
+            ]);
+
+        // Owner and Global Admin can view all users.
+        if (!$user->hasGlobalAccess()) {
+            // Branch Admin can view their own account
+            // and Accounting / Staff accounts assigned to their branch.
+            $query->where(function ($query) use ($user) {
+                $query->where('id', $user->id);
+
+                if ($user->branch_id) {
+                    $query->orWhere(function ($branchQuery) use ($user) {
+                        $branchQuery
+                            ->where('branch_id', $user->branch_id)
+                            ->whereHas('role', function ($roleQuery) {
+                                $roleQuery->whereIn('name', [
+                                    'Accounting',
+                                    'Staff',
+                                ]);
+                            });
+                    });
+                }
+            });
+        }
+
+        $users = $query
             ->latest()
             ->paginate(20);
 
@@ -38,6 +59,8 @@ class UserManagementController extends Controller
         ]);
     }
 
+
+    
     public function show(Request $request, User $managedUser): JsonResponse
     {
         $user = $request->user();
@@ -48,13 +71,23 @@ class UserManagementController extends Controller
             ], 403);
         }
 
-        if (
-            !$user->hasGlobalAccess()
-            && $managedUser->branch_id !== $user->branch_id
-        ) {
-            return response()->json([
-                'message' => 'You are not allowed to view this user.',
-            ], 403);
+        // Owner and Global Admin can view all users.
+        if (!$user->hasGlobalAccess()) {
+            $isOwnAccount = $managedUser->id === $user->id;
+
+            $isBranchUser =
+                $managedUser->branch_id === $user->branch_id
+                && in_array(
+                    $managedUser->role?->name,
+                    ['Accounting', 'Staff'],
+                    true
+                );
+
+            if (!$isOwnAccount && !$isBranchUser) {
+                return response()->json([
+                    'message' => 'You are not allowed to view this user.',
+                ], 403);
+            }
         }
 
         $managedUser->load([
@@ -67,11 +100,13 @@ class UserManagementController extends Controller
         ]);
     }
 
+
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
+        $actorRole = $user->role?->name;
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
+        if (!in_array($actorRole, ['Owner', 'Admin'], true)) {
             return response()->json([
                 'message' => 'You are not allowed to create users.',
             ], 403);
@@ -87,72 +122,100 @@ class UserManagementController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'role_id' => ['required', 'integer', 'exists:roles,id'],
             'branch_id' => ['nullable', 'integer', 'exists:branches,id'],
-            'is_active' => ['boolean'],
-            'is_global_admin' => ['boolean'],
+            'is_active' => ['sometimes', 'boolean'],
+            'is_global_admin' => ['sometimes', 'boolean'],
         ]);
 
         $role = Role::findOrFail($validated['role_id']);
 
-        // Global Admin access is only valid for Admin users.
-        if (
-            ($validated['is_global_admin'] ?? false)
-            && $role->name !== 'Admin'
-        ) {
-            return response()->json([
-                'message' => 'Only Admin users can have global admin access.',
-            ], 422);
-        }
+        $isGlobalAdmin = $user->hasGlobalAccess();
+        $isOwner = $actorRole === 'Owner';
+        $requestedGlobalAdmin = $validated['is_global_admin'] ?? false;
 
-        // Only Owner can create an Owner.
-        if (
-            $role->name === 'Owner'
-            && $user->role?->name !== 'Owner'
-        ) {
-            return response()->json([
-                'message' => 'Only the Owner can create an Owner account.',
-            ], 403);
-        }
+        /*
+        |--------------------------------------------------------------------------
+        | Owner permissions
+        |--------------------------------------------------------------------------
+        */
 
-        // Admin can only create users within their own branch.
-        if ($user->role?->name === 'Admin') {
+        if ($isOwner) {
+            // Only Owner can create another Owner.
+            // Owner accounts cannot be Global Admin.
+            if ($role->name === 'Owner' && $requestedGlobalAdmin) {
+                return response()->json([
+                    'message' => 'Owner accounts cannot have global admin access.',
+                ], 422);
+            }
+
+            // Global Admin must be an Admin without branch assignment.
+            if ($requestedGlobalAdmin && $role->name !== 'Admin') {
+                return response()->json([
+                    'message' => 'Only Admin users can have global admin access.',
+                ], 422);
+            }
+
+            $branchId = $requestedGlobalAdmin
+                ? null
+                : ($validated['branch_id'] ?? null);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Global Admin permissions
+        |--------------------------------------------------------------------------
+        */
+
+        } elseif ($isGlobalAdmin) {
+            // Global Admin cannot create Owner or another Global Admin.
+            if ($role->name === 'Owner' || $requestedGlobalAdmin) {
+                return response()->json([
+                    'message' => 'Global Admin cannot create Owner or Global Admin accounts.',
+                ], 403);
+            }
+
+            // All created users must be assigned to a branch.
+            if (empty($validated['branch_id'])) {
+                return response()->json([
+                    'message' => 'A branch is required for this role.',
+                ], 422);
+            }
+
+            $branchId = $validated['branch_id'];
+
+        /*
+        |--------------------------------------------------------------------------
+        | Branch Admin permissions
+        |--------------------------------------------------------------------------
+        */
+
+        } else {
             if (!$user->branch_id) {
                 return response()->json([
                     'message' => 'Admin is not assigned to a branch.',
                 ], 403);
             }
 
-            if (
-                $role->name === 'Owner'
-                || !isset($validated['branch_id'])
-                || (int) $validated['branch_id'] !== (int) $user->branch_id
-                || ($validated['is_global_admin'] ?? false)
-            ) {
+            // Branch Admin can create only Accounting and Staff.
+            if (!in_array($role->name, ['Accounting', 'Staff'], true)) {
                 return response()->json([
-                    'message' => 'Admin can only create users within their own branch.',
+                    'message' => 'Branch Admin can only create Accounting and Staff users.',
                 ], 403);
             }
+
+            if ($requestedGlobalAdmin) {
+                return response()->json([
+                    'message' => 'Branch Admin cannot grant global admin access.',
+                ], 403);
+            }
+
+            // Always assign the Branch Admin's own branch.
+            $branchId = $user->branch_id;
         }
 
-        // Non-owner users should always belong to a branch.
-        if (
-            $role->name !== 'Owner'
-            && $role->name !== 'Admin'
-            && empty($validated['branch_id'])
-        ) {
-            return response()->json([
-                'message' => 'A branch is required for this role.',
-            ], 422);
-        }
-
-        if (
-            $role->name === 'Admin'
-            && !($validated['is_global_admin'] ?? false)
-            && empty($validated['branch_id'])
-        ) {
-            return response()->json([
-                'message' => 'A branch is required for a branch-scoped Admin.',
-            ], 422);
-        }
+        /*
+        |--------------------------------------------------------------------------
+        | Create user
+        |--------------------------------------------------------------------------
+        */
 
         $managedUser = User::create([
             'username' => $validated['username'],
@@ -163,9 +226,9 @@ class UserManagementController extends Controller
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
             'role_id' => $validated['role_id'],
-            'branch_id' => $validated['branch_id'] ?? null,
+            'branch_id' => $branchId,
             'is_active' => $validated['is_active'] ?? true,
-            'is_global_admin' => $validated['is_global_admin'] ?? false,
+            'is_global_admin' => $isOwner && $requestedGlobalAdmin,
         ]);
 
         $managedUser->load([
