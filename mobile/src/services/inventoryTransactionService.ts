@@ -1,10 +1,10 @@
 import { API_BASE_URL } from '../config/api';
 import { getAuthToken } from './authService';
 
-export interface InventoryTransaction {
+export interface InventoryTransactionItem {
   id: number;
-  inventory_item_id: number;
   warehouse_id: number;
+  inventory_item_id: number;
   type: string;
   transaction_category: string;
   quantity: string | number;
@@ -39,6 +39,15 @@ export interface InventoryTransaction {
     id: number;
     name: string;
   } | null;
+}
+
+export interface InventoryTransaction {
+  id: number;
+  transaction_category: string;
+  reference: string | null;
+  date: string;
+  item_count: number;
+  items: InventoryTransactionItem[];
 }
 
 export interface InventoryTransactionSummary {

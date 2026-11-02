@@ -50,6 +50,13 @@ export default function InventoryTransactionsScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'stock_in' | 'transfer' | 'adjustment'
+  >('all');
+
+  const [expandedTransactionId, setExpandedTransactionId] =
+    useState<number | null>(null);
+
   const loadTransactions = useCallback(async () => {
     try {
       setError(null);
@@ -104,24 +111,38 @@ export default function InventoryTransactionsScreen({
     });
   };
 
-  const getTransactionColor = (type: string) => {
-    switch (type) {
-      case 'stock_in':
+  const getTransactionColor = (category: string) => {
+    switch (category) {
+      case 'Stock In':
         return '#059669';
-      case 'sale':
-        return '#2563EB';
-      case 'sale_reversal':
-        return '#D97706';
-      case 'adjustment':
-        return '#7C3AED';
-      case 'transfer_in':
+      case 'Stock Transfer':
         return '#0891B2';
-      case 'transfer_out':
-        return '#EA580C';
+      case 'Adjustment':
+        return '#7C3AED';
+      case 'Sale':
+        return '#2563EB';
+      case 'Sale Reversal':
+        return '#D97706';
       default:
         return '#6B7280';
     }
   };
+
+    const filteredTransactions = transactions.filter((transaction) => {
+    switch (activeTab) {
+      case 'stock_in':
+        return transaction.transaction_category === 'Stock In';
+
+      case 'transfer':
+        return transaction.transaction_category === 'Stock Transfer';
+
+      case 'adjustment':
+        return transaction.transaction_category === 'Adjustment';
+
+      default:
+        return true;
+    }
+  });
 
   return (
     <View style={styles.container}>
@@ -229,36 +250,93 @@ export default function InventoryTransactionsScreen({
             />
           </View>
 
-          {/* Transaction List */}
+         {/* Transaction List */}
           <View style={styles.listHeader}>
             <Text style={styles.sectionTitle}>Transaction History</Text>
 
             <Text style={styles.resultCount}>
-              {formatNumber(transactions.length)} records
+              {formatNumber(filteredTransactions.length)} records
             </Text>
           </View>
 
-          {transactions.length === 0 ? (
+          {/* Transaction Tabs */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.tabScroll}
+            contentContainerStyle={styles.tabContainer}
+          >
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'stock_in', label: 'Stock In' },
+              { key: 'transfer', label: 'Stock Transfer' },
+              { key: 'adjustment', label: 'Adjustment' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.key;
+
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tabButton,
+                    isActive && styles.activeTabButton,
+                  ]}
+                  onPress={() => {
+                    setActiveTab(tab.key as typeof activeTab);
+                    setExpandedTransactionId(null);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text
+                    style={[
+                      styles.tabButtonText,
+                      isActive && styles.activeTabButtonText,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {filteredTransactions.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyTitle}>No Transactions Found</Text>
               <Text style={styles.emptyText}>
-                Inventory transaction records will appear here.
+                No transaction records found for this category.
               </Text>
             </View>
           ) : (
-            transactions.map((transaction) => {
-              const color = getTransactionColor(transaction.type);
+            filteredTransactions.map((transaction) => {
+              const color = getTransactionColor(
+                transaction.transaction_category,
+              );
+
+              const isExpanded =
+                expandedTransactionId === transaction.id;
 
               return (
-                <View key={transaction.id} style={styles.transactionCard}>
+                <TouchableOpacity
+                  key={transaction.id}
+                  style={styles.transactionCard}
+                  activeOpacity={0.9}
+                  onPress={() =>
+                    setExpandedTransactionId(
+                      isExpanded ? null : transaction.id,
+                    )
+                  }
+                >
+                  {/* Document Header */}
                   <View style={styles.transactionTopRow}>
                     <View style={styles.transactionItemContainer}>
                       <Text style={styles.itemName}>
-                        {transaction.inventory_item?.name ?? 'Unknown Item'}
+                        {transaction.reference ?? `Transaction #${transaction.id}`}
                       </Text>
 
                       <Text style={styles.itemSku}>
-                        SKU: {transaction.inventory_item?.sku ?? 'N/A'}
+                        {transaction.item_count}{' '}
+                        {transaction.item_count === 1 ? 'item' : 'items'}
                       </Text>
                     </View>
 
@@ -276,38 +354,97 @@ export default function InventoryTransactionsScreen({
 
                   <View style={styles.transactionDivider} />
 
+                  {/* Document Details */}
                   <View style={styles.transactionDetails}>
                     <View style={styles.detailColumn}>
-                      <Text style={styles.detailLabel}>Quantity</Text>
-                      <Text style={[styles.quantityValue, { color }]}>
-                        {formatQuantity(transaction.quantity)}
-                        {transaction.inventory_item?.uom?.abbreviation
-                          ? ` ${transaction.inventory_item.uom.abbreviation}`
-                          : ''}
+                      <Text style={styles.detailLabel}>Reference</Text>
+                      <Text style={styles.detailValue}>
+                        {transaction.reference ?? `#${transaction.id}`}
                       </Text>
                     </View>
 
                     <View style={styles.detailColumn}>
-                      <Text style={styles.detailLabel}>Warehouse</Text>
+                      <Text style={styles.detailLabel}>Items</Text>
                       <Text style={styles.detailValue}>
-                        {transaction.warehouse?.name ?? 'N/A'}
+                        {transaction.item_count}
                       </Text>
                     </View>
                   </View>
 
-                  {transaction.related_warehouse && (
-                    <View style={styles.relatedWarehouseContainer}>
-                      <Text style={styles.detailLabel}>Related Warehouse</Text>
-                      <Text style={styles.detailValue}>
-                        {transaction.related_warehouse.name}
+                  <Text style={styles.transactionDate}>
+                    {formatDate(transaction.date)}
+                  </Text>
+
+                  {/* Expand Indicator */}
+                  <View style={styles.expandIndicator}>
+                    <Text style={styles.expandIndicatorText}>
+                      {isExpanded ? 'Hide Items ▲' : 'View Items ▼'}
+                    </Text>
+                  </View>
+
+                  {/* Associated Inventory Items */}
+                  {isExpanded && (
+                    <View style={styles.expandedItemsContainer}>
+                      <Text style={styles.expandedItemsTitle}>
+                        Transaction Items
                       </Text>
+
+                      {transaction.items.map((item) => {
+                        const itemColor = getTransactionColor(
+                          item.transaction_category,
+                        );
+
+                        return (
+                          <View key={item.id} style={styles.expandedItemCard}>
+                            <View style={styles.expandedItemHeader}>
+                              <View style={styles.transactionItemContainer}>
+                                <Text style={styles.itemName}>
+                                  {item.inventory_item?.name ?? 'Unknown Item'}
+                                </Text>
+
+                                <Text style={styles.itemSku}>
+                                  SKU: {item.inventory_item?.sku ?? 'N/A'}
+                                </Text>
+                              </View>
+
+                              <Text
+                                style={[
+                                  styles.quantityValue,
+                                  { color: itemColor },
+                                ]}
+                              >
+                                {formatQuantity(item.quantity)}
+                                {item.inventory_item?.uom?.abbreviation
+                                  ? ` ${item.inventory_item.uom.abbreviation}`
+                                  : ''}
+                              </Text>
+                            </View>
+
+                            <Text style={styles.expandedItemDetail}>
+                              Movement: {item.type.replace(/_/g, ' ')}
+                            </Text>
+
+                            <Text style={styles.expandedItemDetail}>
+                              Warehouse: {item.warehouse?.name ?? 'N/A'}
+                            </Text>
+
+                            {item.related_warehouse && (
+                              <Text style={styles.expandedItemDetail}>
+                                Related Warehouse: {item.related_warehouse.name}
+                              </Text>
+                            )}
+
+                            {item.notes && (
+                              <Text style={styles.expandedItemDetail}>
+                                Notes: {item.notes}
+                              </Text>
+                            )}
+                          </View>
+                        );
+                      })}
                     </View>
                   )}
-
-                  <Text style={styles.transactionDate}>
-                    {formatDate(transaction.created_at)}
-                  </Text>
-                </View>
+                </TouchableOpacity>
               );
             })
           )}
@@ -573,5 +710,86 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 6,
     textAlign: 'center',
+  },
+  tabScroll: {
+    marginBottom: 14,
+  },
+
+  tabContainer: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+
+  tabButton: {
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+
+  activeTabButton: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+
+  tabButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+
+  activeTabButtonText: {
+    color: '#FFFFFF',
+  },
+
+  expandIndicator: {
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+
+  expandIndicatorText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+
+  expandedItemsContainer: {
+    marginTop: 14,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+
+  expandedItemsTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#102A43',
+    marginBottom: 10,
+  },
+
+  expandedItemCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+
+  expandedItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  expandedItemDetail: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 7,
+    textTransform: 'capitalize',
   },
 });

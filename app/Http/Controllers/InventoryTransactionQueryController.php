@@ -87,10 +87,13 @@ class InventoryTransactionQueryController extends Controller
         */
 
         if ($request->filled('type')) {
-            $query->where(
-                'type',
-                $request->string('type')->trim()
-            );
+            $type = $request->string('type')->trim()->toString();
+
+            if ($type === 'transfer') {
+                $query->whereIn('type', ['transfer_in', 'transfer_out']);
+            } else {
+                $query->where('type', $type);
+            }
         }
 
         /*

@@ -615,33 +615,46 @@ export default function ReportsIndex() {
                 page += 1;
             } while (page <= lastPage);
 
-            const rows = allRows.map((row) => {
-                const item = row.inventory_item ?? row.inventoryItem ?? {};
-                const warehouse = row.warehouse ?? {};
+            const rows = allRows.flatMap((document) => {
+                const items = Array.isArray(document.items) ? document.items : [];
 
-                const reference = [
-                    row.transfer_reference,
-                    row.reference_type && row.reference_id
-                        ? `${row.reference_type} #${row.reference_id}`
-                        : null,
-                    row.notes,
-                ]
-                    .filter(Boolean)
-                    .join(' · ');
+                return items.map((transaction) => {
+                    const item =
+                        transaction.inventory_item ??
+                        transaction.inventoryItem ??
+                        {};
 
-                return [
-                    row.created_at
-                        ? new Date(row.created_at).toLocaleString('en-PH')
-                        : '',
-                    item.sku ?? '',
-                    item.name ?? '',
-                    row.transaction_category ?? 'Other',
-                    row.type ?? '',
-                    Number(row.quantity ?? 0),
-                    warehouse.name ?? '',
-                    row.related_warehouse?.name ?? '',
-                    reference,
-                ];
+                    const warehouse = transaction.warehouse ?? {};
+
+                    const reference = [
+                        document.reference,
+                        transaction.transfer_reference,
+                        transaction.reference_type && transaction.reference_id
+                            ? `${transaction.reference_type} #${transaction.reference_id}`
+                            : null,
+                        transaction.notes,
+                    ]
+                        .filter(Boolean)
+                        .join(' · ');
+
+                    return [
+                        transaction.created_at
+                            ? new Date(transaction.created_at).toLocaleString('en-PH')
+                            : document.date
+                                ? new Date(document.date).toLocaleString('en-PH')
+                                : '',
+                        item.sku ?? '',
+                        item.name ?? '',
+                        document.transaction_category ??
+                            transaction.transaction_category ??
+                            'Other',
+                        transaction.type ?? '',
+                        Number(transaction.quantity ?? 0),
+                        warehouse.name ?? '',
+                        transaction.related_warehouse?.name ?? '',
+                        reference,
+                    ];
+                });
             });
 
             const from = inventoryDateFrom || 'all-dates';
@@ -2025,7 +2038,7 @@ export default function ReportsIndex() {
                                             </div>
 
                             {/* Inventory Movement Summary */}
-                            {inventoryView === 'movements' && inventorySummary && (
+                            {inventoryView === 'movement' && inventorySummary && (
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-6">
                                     {[
                                         {
@@ -2099,44 +2112,128 @@ export default function ReportsIndex() {
                                                         )}
                                                     </thead>
                                                     <tbody className="divide-y divide-gray-200 bg-white">
-                                                        {rows.map((row) => {
-                                                            const item = row.inventory_item ?? row.inventoryItem ?? {};
-                                                            const warehouse = row.warehouse ?? {};
-                                                            if (inventoryView === 'movement') {
-                                                                return (
-                                                                    <tr key={row.id}>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{row.created_at ? new Date(row.created_at).toLocaleString('en-PH') : '—'}</td>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{item.sku || '—'}</td>
-                                                                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name || '—'}</td>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{row.transaction_category || 'Other'}</td>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{row.type || '—'}</td>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{moneyOrQuantity(row.quantity)}</td>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{warehouse.name || '—'}</td>
-                                                                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{row.related_warehouse?.name || '—'}</td>
-                                                                        <td className="min-w-48 px-4 py-3 text-sm text-gray-700">{[row.transfer_reference, row.reference_type && row.reference_id ? `${row.reference_type} #${row.reference_id}` : null, row.notes].filter(Boolean).join(' · ') || '—'}</td>
-                                                                    </tr>
-                                                                );
-                                                            }
-                                                            const uom = item.uom ?? {};
-                                                            const quantity = Number(row.quantity ?? 0);
-                                                            const reorderLevel = Number(item.reorder_level ?? 0);
-                                                            const isLow = row.is_low_stock ?? (quantity <= reorderLevel);
-                                                            return (
-                                                                <tr key={row.id}>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{item.sku || '—'}</td>
-                                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{item.name || '—'}</td>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{warehouse.name || '—'}</td>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{warehouse.branch?.name || '—'}</td>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{moneyOrQuantity(row.quantity)}</td>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">{uom.abbreviation || uom.symbol || uom.name || '—'}</td>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">{moneyOrQuantity(item.reorder_level)}</td>
-                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm">
-                                                                        {isLow ? <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">Low Stock</span> : <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">In Stock</span>}
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
+                                                                {rows.flatMap((row) => {
+                                                                    if (inventoryView === 'movement') {
+                                                                        const items = Array.isArray(row.items) ? row.items : [];
+
+                                                                        return items.map((transaction) => {
+                                                                            const item =
+                                                                                transaction.inventory_item ??
+                                                                                transaction.inventoryItem ??
+                                                                                {};
+
+                                                                            const warehouse = transaction.warehouse ?? {};
+
+                                                                            const reference = [
+                                                                                row.reference,
+                                                                                transaction.transfer_reference,
+                                                                                transaction.reference_type && transaction.reference_id
+                                                                                    ? `${transaction.reference_type} #${transaction.reference_id}`
+                                                                                    : null,
+                                                                                transaction.notes,
+                                                                            ]
+                                                                                .filter(Boolean)
+                                                                                .join(' · ');
+
+                                                                            return (
+                                                                                <tr key={`${row.id}-${transaction.id}`}>
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                        {transaction.created_at
+                                                                                            ? new Date(transaction.created_at).toLocaleString('en-PH')
+                                                                                            : row.date
+                                                                                                ? new Date(row.date).toLocaleString('en-PH')
+                                                                                                : '—'}
+                                                                                    </td>
+
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                        {item.sku || '—'}
+                                                                                    </td>
+
+                                                                                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                                                        {item.name || '—'}
+                                                                                    </td>
+
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                        {row.transaction_category || transaction.transaction_category || 'Other'}
+                                                                                    </td>
+
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                        {transaction.type || '—'}
+                                                                                    </td>
+
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
+                                                                                        {moneyOrQuantity(transaction.quantity)}
+                                                                                    </td>
+
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                        {warehouse.name || '—'}
+                                                                                    </td>
+
+                                                                                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                        {transaction.related_warehouse?.name || '—'}
+                                                                                    </td>
+
+                                                                                    <td className="min-w-48 px-4 py-3 text-sm text-gray-700">
+                                                                                        {reference || '—'}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        });
+                                                                    }
+
+                                                                    // Existing Stock on Hand / Low Stock display
+                                                                    const item = row.inventory_item ?? row.inventoryItem ?? {};
+                                                                    const warehouse = row.warehouse ?? {};
+                                                                    const uom = item.uom ?? {};
+                                                                    const quantity = Number(row.quantity ?? 0);
+                                                                    const reorderLevel = Number(item.reorder_level ?? 0);
+                                                                    const isLow = row.is_low_stock ?? (quantity <= reorderLevel);
+
+                                                                    return [
+                                                                        <tr key={row.id}>
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                {item.sku || '—'}
+                                                                            </td>
+
+                                                                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                                                                {item.name || '—'}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                {warehouse.name || '—'}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                {warehouse.branch?.name || '—'}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
+                                                                                {moneyOrQuantity(row.quantity)}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                                                                                {uom.abbreviation || uom.symbol || uom.name || '—'}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-right text-sm text-gray-700">
+                                                                                {moneyOrQuantity(item.reorder_level)}
+                                                                            </td>
+
+                                                                            <td className="whitespace-nowrap px-4 py-3 text-sm">
+                                                                                {isLow ? (
+                                                                                    <span className="rounded-full bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                                                                                        Low Stock
+                                                                                    </span>
+                                                                                ) : (
+                                                                                    <span className="rounded-full bg-green-100 px-2 py-1 text-xs font-semibold text-green-700">
+                                                                                        In Stock
+                                                                                    </span>
+                                                                                )}
+                                                                            </td>
+                                                                        </tr>,
+                                                                    ];
+                                                                })}
+                                                            </tbody>
                                                 </table>
                                             </div>
                                             {rows.length === 0 && <p className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">No records found for the selected filters.</p>}
