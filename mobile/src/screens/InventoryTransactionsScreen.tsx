@@ -18,6 +18,9 @@ import {
   type InventoryTransactionSummary,
 } from '../services/inventoryTransactionService';
 
+import { getBranches } from '../services/branchService';
+import type { Branch } from '../services/branchService';
+
 interface InventoryTransactionsScreenProps {
   user: AuthUser;
   onBack: () => void;
@@ -54,36 +57,62 @@ export default function InventoryTransactionsScreen({
     'all' | 'stock_in' | 'transfer' | 'adjustment'
   >('all');
 
+  const isOwner = user.role?.name === 'Owner';
+
+  const isGlobalAdmin =
+    user.role?.name === 'Admin' &&
+    user.is_global_admin === true;
+
+  const canSelectAnyBranch = isOwner || isGlobalAdmin;
+
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false);
+
   const [expandedTransactionId, setExpandedTransactionId] =
     useState<number | null>(null);
 
-  const loadTransactions = useCallback(async () => {
-    try {
-      setError(null);
-      setIsLoading(true);
+  const loadTransactions = useCallback(
+    async (tab: typeof activeTab = 'all') => {
+      try {
+        setError(null);
+        setIsLoading(true);
 
-      const result = await getInventoryTransactions({
-        page: 1,
-        per_page: 20,
-      });
+        const result = await getInventoryTransactions({
+          page: 1,
+          per_page: 20,
+          ...(tab === 'stock_in' && { type: 'stock_in' }),
+          ...(tab === 'transfer' && { type: 'transfer' }),
+          ...(tab === 'adjustment' && { type: 'adjustment' }),
+          ...(canSelectAnyBranch &&
+            selectedBranchId !== null && {
+              branch_id: selectedBranchId,
+            }),
+        });
 
-      setTransactions(result.data.data);
-      setSummary(result.summary);
-    } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'Unable to load inventory transactions.';
+        setTransactions(result.data.data);
 
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+        // Keep the overall summary from the unfiltered response.
+        if (tab === 'all') {
+          setSummary(result.summary);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Unable to load inventory transactions.';
+
+        setError(message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [canSelectAnyBranch, selectedBranchId]
+  );
 
   useEffect(() => {
-    void loadTransactions();
-  }, [loadTransactions]);
+    void loadTransactions(activeTab);
+  }, [loadTransactions, activeTab]);
 
   const formatNumber = (value: number | string | null | undefined) => {
     return Number(value ?? 0).toLocaleString('en-PH');
@@ -128,21 +157,46 @@ export default function InventoryTransactionsScreen({
     }
   };
 
-    const filteredTransactions = transactions.filter((transaction) => {
-    switch (activeTab) {
-      case 'stock_in':
-        return transaction.transaction_category === 'Stock In';
+    const filteredTransactions = transactions;
 
-      case 'transfer':
-        return transaction.transaction_category === 'Stock Transfer';
-
-      case 'adjustment':
-        return transaction.transaction_category === 'Adjustment';
-
-      default:
-        return true;
+    useEffect(() => {
+    if (!canSelectAnyBranch) {
+      return;
     }
-  });
+
+    let isMounted = true;
+
+    async function loadBranches() {
+      setIsLoadingBranches(true);
+
+      try {
+        const result = await getBranches();
+
+        if (isMounted) {
+          setBranches(result);
+        }
+      } catch (err) {
+        if (isMounted) {
+          const message =
+            err instanceof Error
+              ? err.message
+              : 'Unable to load branches.';
+
+          setError(message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingBranches(false);
+        }
+      }
+    }
+
+    void loadBranches();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canSelectAnyBranch]);
 
   return (
     <View style={styles.container}>
@@ -165,7 +219,7 @@ export default function InventoryTransactionsScreen({
 
         <TouchableOpacity
           style={styles.refreshButton}
-          onPress={() => void loadTransactions()}
+          onPress={() => void loadTransactions(activeTab)}
           disabled={isLoading}
           activeOpacity={0.8}
         >
@@ -197,6 +251,67 @@ export default function InventoryTransactionsScreen({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+
+          {canSelectAnyBranch && (
+  <View style={styles.branchFilterContainer}>
+    <Text style={styles.branchFilterLabel}>Branch</Text>
+
+    {isLoadingBranches ? (
+      <ActivityIndicator color="#2563EB" />
+    ) : (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.branchList}
+      >
+        <TouchableOpacity
+          style={[
+            styles.branchOption,
+            selectedBranchId === null && styles.branchOptionSelected,
+          ]}
+          onPress={() => setSelectedBranchId(null)}
+          activeOpacity={0.8}
+        >
+          <Text
+            style={[
+              styles.branchOptionText,
+              selectedBranchId === null &&
+                styles.branchOptionTextSelected,
+            ]}
+          >
+            All Branches
+          </Text>
+        </TouchableOpacity>
+
+        {branches.map((branch) => {
+          const selected = branch.id === selectedBranchId;
+
+          return (
+                  <TouchableOpacity
+                    key={branch.id}
+                    style={[
+                      styles.branchOption,
+                      selected && styles.branchOptionSelected,
+                    ]}
+                    onPress={() => setSelectedBranchId(branch.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.branchOptionText,
+                        selected && styles.branchOptionTextSelected,
+                      ]}
+                    >
+                      {branch.name}
+                      {branch.code ? ` (${branch.code})` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      )}
           {/* Summary */}
           <Text style={styles.sectionTitle}>Transaction Summary</Text>
 
@@ -282,8 +397,12 @@ export default function InventoryTransactionsScreen({
                     isActive && styles.activeTabButton,
                   ]}
                   onPress={() => {
-                    setActiveTab(tab.key as typeof activeTab);
-                    setExpandedTransactionId(null);
+                      const selectedTab = tab.key as typeof activeTab;
+
+                      setActiveTab(selectedTab);
+                      setExpandedTransactionId(null);
+
+                      void loadTransactions(selectedTab);
                   }}
                   activeOpacity={0.8}
                 >
@@ -791,5 +910,47 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 7,
     textTransform: 'capitalize',
+  },
+
+  branchFilterContainer: {
+    marginBottom: 22,
+  },
+
+  branchFilterLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 10,
+  },
+
+  branchList: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingRight: 8,
+  },
+
+  branchOption: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+  },
+
+  branchOptionSelected: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+
+  branchOptionText: {
+    color: '#374151',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  branchOptionTextSelected: {
+    color: '#1D4ED8',
+    fontWeight: '800',
   },
 });
