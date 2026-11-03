@@ -6,6 +6,7 @@ export interface AuthUser {
   username: string;
   name?: string;
   email?: string;
+  is_global_admin?: boolean;
   role?: {
     id: number;
     name: string;
@@ -108,18 +109,4 @@ export async function getAuthenticatedUser(): Promise<AuthUser | null> {
     throw new Error('Cannot connect to the server to verify your session.');
   }
 }
-export interface AuthUser {
-  id: number;
-  username: string;
-  name?: string;
-  email?: string;
-  is_global_admin?: boolean;
-  role?: {
-    id: number;
-    name: string;
-  } | null;
-  branch?: {
-    id: number;
-    name: string;
-  } | null;
-}
+

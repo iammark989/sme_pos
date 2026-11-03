@@ -35,6 +35,8 @@ import StocksScreen from './StocksScreen';
 
 import InventoryTransactionsScreen from './InventoryTransactionsScreen';
 
+import UserManagementScreen from './UserManagementScreen';
+
 interface DashboardScreenProps {
   user: AuthUser;
   onLogout: () => void;
@@ -70,6 +72,8 @@ export default function DashboardScreen({
   const [isReportsOpen, setIsReportsOpen] = useState(false);
 
   const [isStocksOpen, setIsStocksOpen] = useState(false);
+
+  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
 
   const canViewInventoryTransactions = [
     'Owner',
@@ -206,6 +210,15 @@ export default function DashboardScreen({
       <InventoryTransactionsScreen
         user={user}
         onBack={() => setIsInventoryTransactionsOpen(false)}
+      />
+    );
+  }
+
+  if (isUserManagementOpen) {
+    return (
+      <UserManagementScreen
+        user={user}
+        onBack={() => setIsUserManagementOpen(false)}
       />
     );
   }
@@ -421,15 +434,15 @@ export default function DashboardScreen({
           {isAdminOrOwner && (
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => openFeature('Account')}
+            onPress={() => setIsUserManagementOpen(true)}
             activeOpacity={0.8}
           >
             <View style={styles.actionIconOrange}>
               <Text style={styles.actionIconText}>USER</Text>
             </View>
-            <Text style={styles.actionTitle}>My Account</Text>
+            <Text style={styles.actionTitle}>User Management</Text>
             <Text style={styles.actionDescription}>
-              View account details
+               Manage users and account access.
             </Text>
           </TouchableOpacity>
           )}
