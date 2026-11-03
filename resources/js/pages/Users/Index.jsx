@@ -27,6 +27,105 @@ export default function Index() {
     const [editingUserId, setEditingUserId] = useState(null);
     const isEditMode = editingUserId !== null;
 
+    const currentUser = auth?.user;
+    const currentUserRole = currentUser?.role?.name;
+
+    const isOwner = currentUserRole === 'Owner';
+    const isAdmin = currentUserRole === 'Admin';
+    const isGlobalAdmin = isAdmin && Boolean(currentUser?.is_global_admin);
+    const isBranchAdmin = isAdmin && !isGlobalAdmin;
+
+    const canCreateUser = isOwner || isAdmin;
+
+    const editingUser = users.find(
+        (user) => Number(user.id) === Number(editingUserId)
+    );
+
+    const isOwnAccount = editingUser?.id === currentUser?.id;
+
+    const editingBranchStaff =
+        isBranchAdmin &&
+        Number(editingUser?.branch_id) === Number(currentUser?.branch_id) &&
+        ['Accounting', 'Staff'].includes(editingUser?.role?.name);
+
+    // Branch Admin can only change password and active status
+    // when editing another Accounting or Staff account.
+    const isRestrictedBranchEdit =
+        isEditMode && isBranchAdmin && !isOwnAccount && editingBranchStaff;
+
+    // Hide role and branch assignment when editing your own account
+    // or when a Branch Admin edits another user's account.
+    const canEditRoleAndBranch =
+    !isEditMode ||
+    (!isOwnAccount && (isOwner || isGlobalAdmin));
+
+    // Personal details and email are unavailable for restricted Branch Admin edits.
+    const canEditPersonalDetails = true;
+
+    // Active status is editable for other users, but not for your own account.
+    const canEditActiveStatus =
+        !isEditMode || (!isOwnAccount && (isOwner || isGlobalAdmin || isRestrictedBranchEdit));
+
+    // Username can only be entered when creating an account.
+    const canEditUsername = !isEditMode;
+
+    // Only the Owner can grant or revoke Global Admin access.
+    const canManageGlobalAdmin = isOwner;
+
+    const canEditUser = (targetUser) => {
+        const isOwnAccount = targetUser.id === currentUser?.id;
+        const targetRole = targetUser.role?.name;
+
+        if (isOwner) {
+            return true;
+        }
+
+        if (isGlobalAdmin) {
+            // Global Admin can edit their own account,
+            // but cannot manage Owner or other Global Admin accounts.
+            return isOwnAccount || (
+                targetRole !== 'Owner' &&
+                !targetUser.is_global_admin
+            );
+        }
+
+        if (isBranchAdmin) {
+            const isBranchStaff =
+                Number(targetUser.branch_id) === Number(currentUser?.branch_id) &&
+                ['Accounting', 'Staff'].includes(targetRole);
+
+            return isOwnAccount || isBranchStaff;
+        }
+
+        return false;
+    };
+
+    const canDeactivateUser = (targetUser) => {
+        const isOwnAccount = targetUser.id === currentUser?.id;
+        const targetRole = targetUser.role?.name;
+
+        if (isOwnAccount || targetRole === 'Owner') {
+            return false;
+        }
+
+        if (isOwner) {
+            return true;
+        }
+
+        if (isGlobalAdmin) {
+            return !targetUser.is_global_admin;
+        }
+
+        if (isBranchAdmin) {
+            return (
+                Number(targetUser.branch_id) === Number(currentUser?.branch_id) &&
+                ['Accounting', 'Staff'].includes(targetRole)
+            );
+        }
+
+        return false;
+    };
+
     const openEditModal = async (userId) => {
         setFormErrors({});
         setSaving(false);
@@ -76,16 +175,41 @@ export default function Index() {
         setSaving(true);
         setFormErrors({});
 
-        const payload = {
-            ...form,
-            role_id: Number(form.role_id),
-            branch_id:
+        const payload = {};
+
+        if (canEditPersonalDetails) {
+            payload.first_name = form.first_name;
+            payload.middle_name = form.middle_name;
+            payload.last_name = form.last_name;
+            payload.suffix = form.suffix;
+            payload.email = form.email;
+        }
+
+        if (form.password) {
+            payload.password = form.password;
+        }
+
+        if (canEditRoleAndBranch) {
+            payload.role_id = Number(form.role_id);
+
+            payload.branch_id =
                 form.is_global_admin && Number(form.role_id) === 2
                     ? null
                     : form.branch_id
                     ? Number(form.branch_id)
-                    : null,
-        };
+                    : null;
+        }
+
+        if (canEditActiveStatus) {
+            payload.is_active = form.is_active;
+        }
+
+        if (canManageGlobalAdmin && canEditRoleAndBranch) {
+            payload.is_global_admin =
+                Number(form.role_id) === 2
+                    ? form.is_global_admin
+                    : false;
+        }
 
         // An empty password means keep the current password.
         if (!payload.password) {
@@ -205,8 +329,19 @@ export default function Index() {
             .filter(Boolean)
             .join(' ');
 
-    const roleOptions = [
+    const roleOptions = isOwner
+    ? [
         { id: 2, name: 'Admin' },
+        { id: 3, name: 'Accounting' },
+        { id: 4, name: 'Staff' },
+    ]
+    : isGlobalAdmin
+    ? [
+        { id: 2, name: 'Admin' },
+        { id: 3, name: 'Accounting' },
+        { id: 4, name: 'Staff' },
+    ]
+    : [
         { id: 3, name: 'Accounting' },
         { id: 4, name: 'Staff' },
     ];
@@ -326,13 +461,15 @@ export default function Index() {
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={openCreateModal}
-                        className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                    >
-                        + Create User
-                    </button>
+                    {canCreateUser && (
+                        <button
+                            type="button"
+                            onClick={openCreateModal}
+                            className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                        >
+                            + Create User
+                        </button>
+                    )}
                 </div>
 
                 {error && (
@@ -425,15 +562,17 @@ export default function Index() {
                                             </td>
                                             <td className="whitespace-nowrap px-6 py-4 text-sm">
                                                 <div className="flex items-center gap-2">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openEditModal(user.id)}
-                                                        className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
-                                                    >
-                                                        Edit
-                                                    </button>
+                                                    {canEditUser(user) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditModal(user.id)}
+                                                            className="cursor-pointer rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    )}
 
-                                                    {user.is_active ? (
+                                                    {canDeactivateUser(user) && user.is_active && (
                                                         <button
                                                             type="button"
                                                             onClick={() => handleDeactivateUser(user)}
@@ -444,11 +583,21 @@ export default function Index() {
                                                                 ? 'Deactivating...'
                                                                 : 'Deactivate'}
                                                         </button>
-                                                    ) : (
+                                                    )}
+
+                                                    {!user.is_active && (
                                                         <span className="text-xs text-gray-500">
                                                             Deactivated
                                                         </span>
                                                     )}
+
+                                                    {!canEditUser(user) &&
+                                                        !canDeactivateUser(user) &&
+                                                        user.is_active && (
+                                                            <span className="text-xs text-gray-400">
+                                                                No actions available
+                                                            </span>
+                                                        )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -526,6 +675,8 @@ export default function Index() {
                                 </div>
                             )}
 
+
+                            {canEditPersonalDetails && (
                             <div>
                                 <h3 className="mb-3 font-semibold text-gray-800">
                                     Personal Information
@@ -565,6 +716,7 @@ export default function Index() {
                                     ))}
                                 </div>
                             </div>
+                            )}
 
                             <div>
                                 <h3 className="mb-3 font-semibold text-gray-800">
@@ -574,7 +726,9 @@ export default function Index() {
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     {[
                                         ['username', 'Username', 'text'],
-                                        ['email', 'Email Address', 'email'],
+                                        ...(!isRestrictedBranchEdit
+                                            ? [['email', 'Email Address', 'email']]
+                                            : []),
                                         ['password', 'Password', 'password'],
                                     ].map(([name, label, type]) => (
                                         <div key={name}>
@@ -584,21 +738,22 @@ export default function Index() {
                                             >
                                                 {label}
                                             </label>
+
                                             <input
                                                 id={name}
                                                 name={name}
                                                 type={type}
                                                 value={form[name]}
                                                 onChange={handleFormChange}
-                                                required={name !== 'password' || !isEditMode}
+                                                required={name === 'username' || name === 'email' ? !isEditMode : false}
                                                 minLength={name === 'password' ? 8 : undefined}
                                                 autoComplete={
-                                                    name === 'password'
-                                                        ? 'new-password'
-                                                        : undefined
+                                                    name === 'password' ? 'new-password' : undefined
                                                 }
-                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                                                disabled={name === 'username' && isEditMode}
+                                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
                                             />
+
                                             {formErrors[name]?.map((message, index) => (
                                                 <p
                                                     key={index}
@@ -610,8 +765,15 @@ export default function Index() {
                                         </div>
                                     ))}
                                 </div>
+
+                                {isEditMode && (
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        Username cannot be changed after account creation.
+                                    </p>
+                                )}
                             </div>
 
+                            {canEditRoleAndBranch && (
                             <div>
                                 <h3 className="mb-3 font-semibold text-gray-800">
                                     Role and Branch Assignment
@@ -645,7 +807,7 @@ export default function Index() {
                                             </p>
                                         ))}
                                     </div>
-
+                                            {!isBranchAdmin && (
                                     <div>
                                         <label
                                             htmlFor="branch_id"
@@ -677,7 +839,10 @@ export default function Index() {
                                             </p>
                                         ))}
                                     </div>
+                                    )}
+
                                 </div>
+                                
 
                                 {formErrors.is_global_admin?.map((message, index) => (
                                     <p key={index} className="mt-1 text-sm text-red-600">
@@ -692,18 +857,20 @@ export default function Index() {
                                 )}
 
                                 <div className="mt-4 space-y-3">
-                                    <label className="flex items-center gap-2 text-sm text-gray-700">
-                                        <input
-                                            type="checkbox"
-                                            name="is_active"
-                                            checked={form.is_active}
-                                            onChange={handleFormChange}
-                                            className="rounded border-gray-300"
-                                        />
-                                        Account is active
-                                    </label>
+                                    {canEditActiveStatus && (
+                                        <label className="flex items-center gap-2 text-sm text-gray-700">
+                                            <input
+                                                type="checkbox"
+                                                name="is_active"
+                                                checked={form.is_active}
+                                                onChange={handleFormChange}
+                                                className="rounded border-gray-300"
+                                            />
+                                            Account is active
+                                        </label>
+                                    )}
 
-                                    {form.role_id === '2' && auth?.user?.role?.name === 'Owner' && (
+                                    {canManageGlobalAdmin && form.role_id === '2' && (
                                         <label className="flex items-center gap-2 text-sm text-gray-700">
                                             <input
                                                 type="checkbox"
@@ -717,6 +884,7 @@ export default function Index() {
                                     )}
                                 </div>
                             </div>
+                            )}
 
                             <div className="flex justify-end gap-3 border-t pt-4">
                                 <button

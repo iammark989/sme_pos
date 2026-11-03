@@ -105,6 +105,8 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
         $actorRole = $user->role?->name;
+        $isOwner = $actorRole === 'Owner';
+        $isGlobalAdmin = $user->hasGlobalAccess();
 
         if (!in_array($actorRole, ['Owner', 'Admin'], true)) {
             return response()->json([
@@ -246,6 +248,11 @@ class UserManagementController extends Controller
     {
         $user = $request->user();
 
+        $actorRole = $user->role?->name;
+        $isOwner = $actorRole === 'Owner';
+        $isGlobalAdmin = $user->hasGlobalAccess();
+        $targetRole = $managedUser->role?->name;
+
         if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
             return response()->json([
                 'message' => 'You are not allowed to update users.',
@@ -255,7 +262,9 @@ class UserManagementController extends Controller
         // Branch Admin can only manage users in their own branch.
         // Owner and Global Admin can manage users across all branches.
         if (
-            !$user->hasGlobalAccess()
+            $user->role?->name === 'Admin'
+            && !$user->hasGlobalAccess()
+            && $managedUser->id !== $user->id
             && $managedUser->branch_id !== $user->branch_id
         ) {
             return response()->json([
@@ -264,12 +273,6 @@ class UserManagementController extends Controller
         }
 
         $validated = $request->validate([
-            'username' => [
-                'required',
-                'string',
-                'max:100',
-                Rule::unique('users', 'username')->ignore($managedUser->id),
-            ],
             'first_name' => ['required', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
@@ -289,8 +292,73 @@ class UserManagementController extends Controller
 
         $newRole = Role::findOrFail($validated['role_id']);
 
-        $newIsGlobalAdmin = $validated['is_global_admin'] ?? false;
+        $newIsGlobalAdmin = $validated['is_global_admin'] ?? $managedUser->is_global_admin;
 
+         /*
+        |--------------------------------------------------------------------------
+        | Owner / Global Admin self-account protection
+        |--------------------------------------------------------------------------
+        */
+
+        $isOwnAccount = $managedUser->id === $user->id;
+
+        if ($isOwnAccount && ($isOwner || $isGlobalAdmin)) {
+            $rules = [
+                'first_name' => ['required', 'string', 'max:100'],
+                'middle_name' => ['nullable', 'string', 'max:100'],
+                'last_name' => ['required', 'string', 'max:100'],
+                'suffix' => ['nullable', 'string', 'max:20'],
+                'email' => [
+                    'required',
+                    'email',
+                    'max:255',
+                    Rule::unique('users', 'email')->ignore($managedUser->id),
+                ],
+                'password' => ['nullable', 'string', 'min:8'],
+            ];
+
+            $validated = $request->validate($rules);
+
+            $managedUser->first_name = $validated['first_name'];
+            $managedUser->middle_name = $validated['middle_name'] ?? null;
+            $managedUser->last_name = $validated['last_name'];
+            $managedUser->suffix = $validated['suffix'] ?? null;
+            $managedUser->email = $validated['email'];
+
+            if (!empty($validated['password'])) {
+                $managedUser->password = Hash::make($validated['password']);
+            }
+
+            $managedUser->save();
+
+            $managedUser->load(['role', 'branch']);
+
+            return response()->json([
+                'message' => 'User updated successfully.',
+                'data' => $managedUser,
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Global Admin protection
+        |--------------------------------------------------------------------------
+        */
+
+        // Global Admin cannot modify Owner or other Global Admin accounts.
+        if (
+            $isGlobalAdmin
+            && (
+                $targetRole === 'Owner'
+                || $managedUser->is_global_admin
+            )
+        ) {
+            return response()->json([
+                'message' => 'Global Admin cannot modify Owner or Global Admin accounts.',
+            ], 403);
+        }
+
+        
         /*
         |--------------------------------------------------------------------------
         | Owner protection
@@ -395,13 +463,13 @@ class UserManagementController extends Controller
             }
         }
 
+
         /*
         |--------------------------------------------------------------------------
         | Save
         |--------------------------------------------------------------------------
         */
 
-        $managedUser->username = $validated['username'];
         $managedUser->first_name = $validated['first_name'];
         $managedUser->middle_name = $validated['middle_name'] ?? null;
         $managedUser->last_name = $validated['last_name'];
@@ -432,37 +500,74 @@ class UserManagementController extends Controller
     public function destroy(Request $request, User $managedUser): JsonResponse
     {
         $user = $request->user();
+        $actorRole = $user->role?->name;
+        $targetRole = $managedUser->role?->name;
 
-        if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
+        if (!in_array($actorRole, ['Owner', 'Admin'], true)) {
             return response()->json([
                 'message' => 'You are not allowed to deactivate users.',
             ], 403);
         }
 
-        // Branch Admin can only manage users in their own branch.
-        // Owner and Global Admin can manage users across all branches.
-        if (
-            !$user->hasGlobalAccess()
-            && $managedUser->branch_id !== $user->branch_id
-        ) {
-            return response()->json([
-                'message' => 'You are not allowed to deactivate this user.',
-            ], 403);
-        }
+        $isOwner = $actorRole === 'Owner';
+        $isGlobalAdmin = $user->hasGlobalAccess();
+        $isBranchAdmin = $actorRole === 'Admin' && !$isGlobalAdmin;
 
         // Nobody can deactivate the Owner.
-        if ($managedUser->role?->name === 'Owner') {
+        if ($targetRole === 'Owner') {
             return response()->json([
                 'message' => 'The Owner account cannot be deactivated.',
             ], 403);
         }
 
-        // Prevent a user from deactivating their own account.
+        // Nobody can deactivate their own account.
         if ($managedUser->id === $user->id) {
             return response()->json([
                 'message' => 'You cannot deactivate your own account.',
-            ], 422);
+            ], 403);
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Global Admin restrictions
+        |--------------------------------------------------------------------------
+        */
+
+        if ($isGlobalAdmin && $managedUser->is_global_admin) {
+            return response()->json([
+                'message' => 'Global Admin cannot deactivate another Global Admin.',
+            ], 403);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Branch Admin restrictions
+        |--------------------------------------------------------------------------
+        */
+
+        if ($isBranchAdmin) {
+            if (!$user->branch_id) {
+                return response()->json([
+                    'message' => 'Admin is not assigned to a branch.',
+                ], 403);
+            }
+
+            $isBranchStaff =
+                $managedUser->branch_id === $user->branch_id
+                && in_array($targetRole, ['Accounting', 'Staff'], true);
+
+            if (!$isBranchStaff) {
+                return response()->json([
+                    'message' => 'Branch Admin can only deactivate Accounting and Staff users within their own branch.',
+                ], 403);
+            }
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Deactivate account
+        |--------------------------------------------------------------------------
+        */
 
         $managedUser->is_active = false;
         $managedUser->save();
