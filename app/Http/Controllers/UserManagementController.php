@@ -250,7 +250,7 @@ class UserManagementController extends Controller
 
         $actorRole = $user->role?->name;
         $isOwner = $actorRole === 'Owner';
-        $isGlobalAdmin = $user->hasGlobalAccess();
+        $isGlobalAdmin = $actorRole === 'Admin' && $user->hasGlobalAccess();
         $targetRole = $managedUser->role?->name;
 
         if (!in_array($user->role?->name, ['Owner', 'Admin'], true)) {
