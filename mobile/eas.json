@@ -1,0 +1,10 @@
+﻿{
+  "build": {
+    "demo": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
